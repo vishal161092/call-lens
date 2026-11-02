@@ -1,0 +1,1945 @@
+<template>
+    <div class="ca-app">
+        <!-- ============ TAB NAV ============ -->
+        <nav class="nav-tabs">
+            <button class={tabAdminClass} data-screen="admin" onclick={handleTabSelect}>
+                <span class="tab-icon">📊</span> Overview
+            </button>
+            <button class={tabInsightsClass} data-screen="insights" onclick={handleTabSelect}>
+                <span class="tab-icon">💡</span> Business Insights
+            </button>
+            <button class={tabAgentClass} data-screen="agent" onclick={handleTabSelect}>
+                <span class="tab-icon">🎯</span> Scorecard
+            </button>
+            <button class={tabTeamClass} data-screen="tl" onclick={handleTabSelect}>
+                <span class="tab-icon">👥</span> My Team
+            </button>
+        </nav>
+
+        <!-- ================================================================== -->
+        <!-- SCREEN 1: MASTER CALL-AUDIT OVERVIEW (Apex aggregation)             -->
+        <!-- Date filter → Lead Type → Agent → record → individual analysis     -->
+        <!-- ================================================================== -->
+        <template if:true={isAdmin}>
+        <div class="page">
+
+          <!-- Loading / error / empty states -->
+          <template if:true={masterLoading}>
+            <div class="card"><div class="card-body loading-block">
+              <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+              <p class="muted">Aggregating analysed calls&hellip;</p>
+            </div></div>
+          </template>
+
+          <template if:true={masterError}>
+            <div class="alert alert-error">
+              <span class="a-icon"><span>!</span></span>
+              <div class="a-body"><div class="a-title">Could not load master audit</div>{masterError}</div>
+            </div>
+          </template>
+
+          <template if:false={masterLoading}>
+          <template if:false={hasMasterData}>
+            <div class="mca-overview">
+            <div class="card"><div class="card-body">
+              <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <p class="strong">No analysed calls in this range</p>
+                <p class="muted">Adjust the date filter, or run a new audit batch to analyse more calls.</p>
+                <div class="mca-hero-filter mca-hero-filter-light">
+                  <div class="mca-hero-filter-fields">
+                    <div class="mca-hero-filter-field">
+                      <span class="mca-hero-filter-label">From</span>
+                      <lightning-input type="date" variant="label-hidden" value={filterStartDate}
+                        onchange={handleStartDateChange} class="date-input"></lightning-input>
+                    </div>
+                    <div class="mca-hero-filter-field">
+                      <span class="mca-hero-filter-label">To</span>
+                      <lightning-input type="date" variant="label-hidden" value={filterEndDate}
+                        onchange={handleEndDateChange} class="date-input"></lightning-input>
+                    </div>
+                  </div>
+                  <div class="mca-hero-filter-actions">
+                    <button class="mca-hero-filter-apply" onclick={handleApplyDateFilter}>Apply</button>
+                    <button class="mca-hero-filter-clear" onclick={handleClearDateFilter}>Clear</button>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+            </div>
+          </template>
+
+          <template if:true={hasMasterData}>
+          <div class="mca-overview">
+
+            <!-- ===== HERO: dark score panel (mirrors individual component) ===== -->
+            <div class="mca-hero">
+              <div class="mca-hero-left">
+                <span class="mca-hero-ico"><lightning-icon icon-name="utility:call" variant="inverse" size="small"></lightning-icon></span>
+                <div>
+                  <div class="mca-hero-title-row">
+                    <div class="mca-hero-title">Call Audit Dashboard</div>
+                    <button class="mca-hero-refresh" title="Refresh" onclick={handleApplyDateFilter}>
+                      <lightning-icon icon-name="utility:refresh" variant="inverse" size="x-small"></lightning-icon>
+                    </button>
+                  </div>
+                  <div class="mca-hero-desc">Aggregate quality across all analysed interactions</div>
+                  <span class="mca-hero-chip">{masterTotalCalls} calls · {masterFilterLabel}</span>
+
+                  <!-- Date filter, embedded in the hero (functional — re-queries) -->
+                  <div class="mca-hero-filter">
+                    <div class="mca-hero-filter-fields">
+                      <div class="mca-hero-filter-field">
+                        <span class="mca-hero-filter-label">From</span>
+                        <lightning-input type="date" variant="label-hidden" value={filterStartDate}
+                          onchange={handleStartDateChange} class="date-input"></lightning-input>
+                      </div>
+                      <div class="mca-hero-filter-field">
+                        <span class="mca-hero-filter-label">To</span>
+                        <lightning-input type="date" variant="label-hidden" value={filterEndDate}
+                          onchange={handleEndDateChange} class="date-input"></lightning-input>
+                      </div>
+                    </div>
+                    <div class="mca-hero-filter-actions">
+                      <button class="mca-hero-filter-apply" onclick={handleApplyDateFilter}>Apply</button>
+                      <button class="mca-hero-filter-clear" onclick={handleClearDateFilter}>Clear</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mca-hero-mid">
+                <div class="mca-hero-mid-label">Score breakdown</div>
+                <template for:each={masterHero.rows} for:item="h">
+                  <div key={h.key} class="mca-hero-row">
+                    <span class="mca-hero-row-name">{h.label}</span>
+                    <div class="mca-hero-row-track"><div class="mca-hero-row-fill" style={h.barStyle}></div></div>
+                    <span class="mca-hero-row-val">{h.value}</span>
+                  </div>
+                </template>
+              </div>
+
+              <div class="mca-hero-right">
+                <div class="mca-hero-right-label">Overall score</div>
+                <div class="mca-hero-donut">
+                  <svg width="96" height="96" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="7"></circle>
+                    <circle cx="40" cy="40" r="32" fill="none" stroke-width="7" stroke-linecap="round"
+                      transform="rotate(-90 40 40)" style={masterHero.ringStyle}></circle>
+                  </svg>
+                  <div class="mca-hero-donut-inner">
+                    <span class="mca-hero-donut-val">{masterHero.avg}</span>
+                    <span class="mca-hero-donut-max">/ {masterHero.max}</span>
+                  </div>
+                </div>
+                <span class="mca-hero-pill" style={masterHero.pillStyle}>{masterHero.bandLabel}</span>
+              </div>
+            </div>
+
+            <!-- ===== STAT CARDS (real aggregates) ===== -->
+            <div class="mca-stats">
+              <div class="mca-stat c-blue">
+                <div class="mca-stat-hdr">
+                  <span class="mca-stat-label">Calls Analysed</span>
+                  <span class="mca-stat-ico" style="background:var(--mca-blue-l)">📞</span>
+                </div>
+                <div class="mca-stat-val">{masterTotalCalls}</div>
+                <div class="mca-stat-sub">{masterFilterLabel} · <strong>{masterLeadTypeCount}</strong></div>
+              </div>
+
+              <div class="mca-stat c-amber">
+                <div class="mca-stat-hdr">
+                  <span class="mca-stat-label">Avg Quality Score</span>
+                  <span class="mca-stat-ico" style="background:var(--mca-amber-l)">⭐</span>
+                </div>
+                <div class={masterAvgValClass}>{masterAvgDisplay.value}<span class="mca-stat-val-unit">/{masterAvgDisplay.max}</span></div>
+                <div class="mca-stat-sub">{masterAvgDisplay.percent}% of scale · <strong class={masterAvgDisplay.colorClass}>{masterAvgDisplay.bandLabel}</strong> range</div>
+              </div>
+
+              <div class="mca-stat c-green">
+                <div class="mca-stat-hdr">
+                  <span class="mca-stat-label">Fatal Interactions</span>
+                  <span class="mca-stat-ico" style="background:var(--mca-green-l)">🛡️</span>
+                </div>
+                <div class={masterFatalValClass}>{masterFatalCount}</div>
+                <div class="mca-stat-sub">{masterFatalSubText}</div>
+              </div>
+
+              <div class="mca-stat c-purple">
+                <div class="mca-stat-hdr">
+                  <span class="mca-stat-label">Positive Sentiment</span>
+                  <span class="mca-stat-ico" style="background:var(--mca-purple-l)">😊</span>
+                </div>
+                <div class="mca-stat-val score-purple">{masterSentiment.positivePct}%</div>
+                <div class="mca-stat-sub" style="margin-bottom:7px">Neutral <strong>{masterSentiment.neutralPct}%</strong> · Negative <strong class="score-red">{masterSentiment.negativePct}%</strong></div>
+                <div class="mca-sent-bars">
+                  <div class="mca-sent-pos" style={masterSentiment.posBarStyle}></div>
+                  <div class="mca-sent-neu" style={masterSentiment.neuBarStyle}></div>
+                  <div class="mca-sent-neg" style={masterSentiment.negBarStyle}></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Score distribution — stacked bar + donut/bars grid + insight ===== -->
+            <div class="mca-chart-card">
+              <div class="mca-chart-hdr">
+                <div>
+                  <div class="mca-chart-title">Score distribution</div>
+                  <div class="mca-chart-sub">{masterTotalCalls} calls · {masterFilterLabel}</div>
+                </div>
+              </div>
+
+              <!-- at-a-glance stacked segmented bar -->
+              <div class="mca-diststk-bar">
+                <template for:each={masterDistStacked.segments} for:item="s">
+                  <div key={s.key} class="mca-diststk-seg" style={s.segStyle}>
+                    <template if:true={s.showFull}><span class="mca-diststk-seg-lbl">{s.fullLabel}</span></template>
+                    <template if:false={s.showFull}><span class="mca-diststk-seg-lbl">{s.count}</span></template>
+                  </div>
+                </template>
+              </div>
+
+              <!-- detailed breakdown: donut summary + per-band bars -->
+              <div class="mca-dist-grid">
+                <div class="mca-dist-summary">
+                  <div class="mca-donut">
+                    <svg width="104" height="104" viewBox="0 0 70 70">
+                      <circle cx="35" cy="35" r="28" fill="none" stroke="#F1F5F9" stroke-width="8"></circle>
+                      <circle cx="35" cy="35" r="28" fill="none" stroke-width="8" stroke-linecap="round"
+                        transform="rotate(-90 35 35)" style={masterDistSummary.ringStyle}></circle>
+                    </svg>
+                    <div class="mca-donut-inner">
+                      <span class="mca-donut-val">{masterDistSummary.topPct}</span>
+                      <span class="mca-donut-lbl">{masterDistSummary.topLabel}</span>
+                    </div>
+                  </div>
+                  <div class="mca-dss">
+                    <div class="mca-dss-row"><i style="background:var(--mca-green)"></i><span>Excellent+</span><b>{masterDistSummary.excellentPlus}</b></div>
+                    <div class="mca-dss-row"><i style="background:var(--mca-amber)"></i><span>Good</span><b>{masterDistSummary.good}</b></div>
+                    <div class="mca-dss-row"><i style="background:var(--mca-orange)"></i><span>Fair</span><b>{masterDistSummary.fair}</b></div>
+                    <div class="mca-dss-row"><i style="background:var(--mca-red)"></i><span>Needs Work</span><b>{masterDistSummary.needsWork}</b></div>
+                  </div>
+                </div>
+
+                <div class="mca-dist-bars">
+                  <template for:each={masterDistItems} for:item="d">
+                    <div key={d.key} class="mca-dist-item">
+                      <span class="mca-dist-dot" style={d.dotStyle}></span>
+                      <span class="mca-dist-lbl">{d.label}</span>
+                      <div class="mca-dist-track"><div class="mca-dist-fill" style={d.barStyle}></div></div>
+                      <span class={d.distCountClass}>{d.count}</span>
+                      <span class="mca-dist-pct">{d.pctDisplay}</span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- coaching insight callout -->
+              <div class="mca-diststk-insight" style={masterDistStacked.insightStyle}>
+                <span class="mca-diststk-insight-ico" style={masterDistStacked.insightAccent}>⚠️</span>
+                <div class="mca-diststk-insight-txt">
+                  <strong style={masterDistStacked.insightAccent}>{masterDistStacked.insightPct} of calls are in "{masterDistStacked.insightBand}" range</strong>
+                  — {masterDistStacked.insightTail}
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== ROW: quality & fatal trend (daily) + fatal by type ===== -->
+            <div class="mca-charts mca-charts-2">
+              <!-- Trend chart -->
+              <div class="mca-chart-card">
+                <div class="mca-chart-hdr">
+                  <div>
+                    <div class="mca-chart-title">📈 Quality &amp; fatal trend <span class="mca-dim">— daily</span></div>
+                    <div class="mca-chart-sub">Average score (1–5) and fatal count by day</div>
+                  </div>
+                </div>
+                <template if:true={hasMasterTrend}>
+                  <div class="mca-trend-wrap">
+                    <svg viewBox="0 0 820 200" width="100%" style="display:block">
+                      <!-- grid + axis -->
+                      <line x1="50" y1="20" x2="800" y2="20" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"></line>
+                      <line x1="50" y1="57.5" x2="800" y2="57.5" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"></line>
+                      <line x1="50" y1="95" x2="800" y2="95" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"></line>
+                      <line x1="50" y1="132.5" x2="800" y2="132.5" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"></line>
+                      <line x1="50" y1="170" x2="800" y2="170" stroke="#E2E8F0" stroke-width="1"></line>
+                      <text x="42" y="24" text-anchor="end" font-size="10" fill="#94A3B8">5.0</text>
+                      <text x="42" y="99" text-anchor="end" font-size="10" fill="#94A3B8">3.0</text>
+                      <text x="42" y="174" text-anchor="end" font-size="10" fill="#94A3B8">1.0</text>
+                      <!-- fatal bars -->
+                      <template for:each={masterTrend.bars} for:item="bar">
+                        <rect key={bar.key} x={bar.x} y={bar.y} width={bar.w} height={bar.h} rx="2" fill="#FECACA" opacity=".7"></rect>
+                      </template>
+                      <!-- area + line -->
+                      <path d={masterTrend.areaPath} fill="#EFF4FF"></path>
+                      <polyline points={masterTrend.polyPoints} fill="none" stroke="#2563EB" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                      <template for:each={masterTrend.points} for:item="pt">
+                        <circle key={pt.key} cx={pt.x} cy={pt.y} r="4.5" fill="#fff" stroke="#2563EB" stroke-width="2.5"></circle>
+                      </template>
+                      <!-- x labels -->
+                      <template for:each={masterTrend.xLabels} for:item="xl">
+                        <text key={xl.key} x={xl.x} y="188" text-anchor="middle" font-size="10" fill="#94A3B8">{xl.label}</text>
+                      </template>
+                    </svg>
+                  </div>
+                  <div class="mca-trend-legend">
+                    <span class="mca-leg"><i style="background:#2563EB"></i>Avg quality score (1–5)</span>
+                    <span class="mca-leg"><i style="background:#FECACA"></i>Fatal interactions (count)</span>
+                  </div>
+                </template>
+                <template if:false={hasMasterTrend}>
+                  <div class="mca-empty-mini">Need at least two days of analysed calls to plot a trend.</div>
+                </template>
+              </div>
+
+              <!-- Fatal interactions by type -->
+              <div class="mca-chart-card">
+                <div class="mca-chart-hdr">
+                  <div>
+                    <div class="mca-chart-title">⚠️ Fatal interactions by type</div>
+                    <div class="mca-chart-sub">{masterFatalTotalLabel} across analysed calls</div>
+                  </div>
+                </div>
+                <template if:true={hasMasterFatalRows}>
+                  <template for:each={masterFatalRows} for:item="f">
+                    <div key={f.key} class="mca-fbar">
+                      <span class="mca-fbar-name">{f.label}</span>
+                      <div class="mca-fbar-track"><div class="mca-fbar-fill" style={f.barStyle}></div></div>
+                      <span class="mca-fbar-n" style={f.countStyle}>{f.count}</span>
+                    </div>
+                  </template>
+                </template>
+                <template if:false={hasMasterFatalRows}>
+                  <div class="mca-clean-state">
+                    <span class="mca-clean-ico">✓</span>
+                    <div>
+                      <div class="mca-clean-title">No fatal interactions</div>
+                      <div class="mca-chart-sub">None of the analysed calls were flagged as fatal.</div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- ===== Journey mix & quality score by journey (full width) ===== -->
+            <template if:true={hasMasterJourneyMix}>
+            <div class="mca-chart-card">
+              <div class="mca-chart-hdr">
+                <div>
+                  <div class="mca-chart-title">🧭 Journey mix &amp; quality score by journey</div>
+                  <div class="mca-chart-sub">Share of analysed calls, average score and fatal count per lead type</div>
+                </div>
+              </div>
+              <div class="mca-journey-grid">
+                <template for:each={masterJourneyMix} for:item="j">
+                  <div key={j.key} class="mca-journey">
+                    <div class="mca-journey-top">
+                      <span class="mca-journey-chip"><i style={j.dotStyle}></i>{j.icon} {j.label}</span>
+                      <span class="mca-journey-pct">{j.pct}</span>
+                    </div>
+                    <div class="mca-journey-track"><div class="mca-journey-fill" style={j.barStyle}></div></div>
+                    <div class="mca-journey-meta">{j.count} audits · avg score <strong>{j.avgDisplay}</strong> · {j.fatalCount}</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            </template>
+
+            <!-- ===== ROW: customer intents + sentiment mix + coaching themes ===== -->
+            <div class="mca-charts mca-charts-3">
+              <!-- Top customer intents -->
+              <div class="mca-chart-card">
+                <div class="mca-chart-hdr">
+                  <div>
+                    <div class="mca-chart-title">🧠 Top customer intents</div>
+                    <div class="mca-chart-sub">Most common reasons customers called</div>
+                  </div>
+                </div>
+                <template if:true={hasMasterIntents}>
+                  <template for:each={masterIntentRows} for:item="i">
+                    <div key={i.key} class="mca-ibar">
+                      <span class="mca-ibar-name">{i.label}</span>
+                      <div class="mca-ibar-track"><div class="mca-ibar-fill" style={i.barStyle}></div></div>
+                      <span class="mca-ibar-n">{i.count}</span>
+                    </div>
+                  </template>
+                </template>
+                <template if:false={hasMasterIntents}>
+                  <div class="mca-empty-mini">No customer-intent categories recorded in this range.</div>
+                </template>
+              </div>
+
+              <!-- Sentiment mix -->
+              <div class="mca-chart-card">
+                <div class="mca-chart-hdr">
+                  <div>
+                    <div class="mca-chart-title">😊 Sentiment mix</div>
+                    <div class="mca-chart-sub">Across {masterTotalCalls} analysed calls</div>
+                  </div>
+                </div>
+                <div class="mca-sent-mix">
+                  <div class="mca-donut">
+                    <svg width="118" height="118" viewBox="0 0 70 70">
+                      <circle cx="35" cy="35" r="28" fill="none" stroke="#F1F5F9" stroke-width="9"></circle>
+                      <circle cx="35" cy="35" r="28" fill="none" stroke-width="9" transform="rotate(-90 35 35)" style={masterSentimentDonut.posStyle}></circle>
+                      <circle cx="35" cy="35" r="28" fill="none" stroke-width="9" transform="rotate(-90 35 35)" style={masterSentimentDonut.neuStyle}></circle>
+                      <circle cx="35" cy="35" r="28" fill="none" stroke-width="9" transform="rotate(-90 35 35)" style={masterSentimentDonut.negStyle}></circle>
+                    </svg>
+                    <div class="mca-donut-inner">
+                      <span class="mca-donut-val">{masterSentimentDonut.positivePct}%</span>
+                      <span class="mca-donut-lbl">Positive</span>
+                    </div>
+                  </div>
+                  <div class="mca-sent-legend">
+                    <div class="mca-sent-leg-row"><i style="background:#16A34A"></i><span>Positive</span><b>{masterSentimentDonut.positivePct}%</b></div>
+                    <div class="mca-sent-leg-row"><i style="background:#94A3B8"></i><span>Neutral</span><b>{masterSentimentDonut.neutralPct}%</b></div>
+                    <div class="mca-sent-leg-row"><i style="background:#DC2626"></i><span>Negative</span><b>{masterSentimentDonut.negativePct}%</b></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Coaching themes -->
+              <div class="mca-chart-card">
+                <div class="mca-chart-hdr">
+                  <div>
+                    <div class="mca-chart-title">📋 Coaching themes</div>
+                    <div class="mca-chart-sub">Weakest parameters most often — where to coach</div>
+                  </div>
+                </div>
+                <template if:true={hasMasterCoachingThemes}>
+                  <template for:each={masterCoachingThemes} for:item="t">
+                    <div key={t.key} class={t.themeClass}>
+                      <div class="ctheme-title">{t.title}</div>
+                      <div class="ctheme-desc">{t.desc}</div>
+                    </div>
+                  </template>
+                </template>
+                <template if:false={hasMasterCoachingThemes}>
+                  <div class="mca-empty-mini">No coaching signals — every parameter is scoring well.</div>
+                </template>
+              </div>
+            </div>
+
+            <!-- ===== DRILL-DOWN L1: Lead Type table ===== -->
+            <template if:true={isMasterLeadTypeList}>
+              <div class="mca-table-card">
+                <div class="mca-table-hdr">
+                  <div class="mca-table-title">👥 By lead type <span class="mca-dim">— tap to drill into agents</span></div>
+                </div>
+                <table class="mca-table">
+                  <thead>
+                    <tr>
+                      <th style="width:40%">Lead Type</th>
+                      <th class="mca-th-c">Calls</th>
+                      <th class="mca-th-c">Avg Score</th>
+                      <th>Fatal</th>
+                      <th class="mca-th-r">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template for:each={masterLeadTypeGroups} for:item="lt">
+                      <tr key={lt.key} data-key={lt.key} onclick={handleMasterLeadTypeSelect}>
+                        <td>
+                          <div class="mca-lt-cell">
+                            <span class="mca-lt-ico">{lt.icon}</span>
+                            <span class="mca-lt-name">{lt.plainLabel}</span>
+                          </div>
+                        </td>
+                        <td class="mca-td-c mca-calls">{lt.count}</td>
+                        <td class="mca-td-c"><span class={lt.scoreBadgeClass}>{lt.avgDisplay}</span></td>
+                        <td>
+                          <template if:true={lt.hasFatal}>
+                            <span class="mca-fatal score-red">⚠️ {lt.fatalLabel}</span>
+                          </template>
+                          <template if:false={lt.hasFatal}>
+                            <span class="mca-fatal score-green">✓ No fatal errors</span>
+                          </template>
+                        </td>
+                        <td class="mca-td-r">
+                          <button class="mca-view-btn" data-key={lt.key} onclick={handleMasterLeadTypeSelect}>View agents ›</button>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+                <div class="mca-footer-note">Showing {masterLeadTypeGroups.length} lead type(s) · Sorted by call volume</div>
+              </div>
+            </template>
+
+            <!-- L2: Agent list within selected Lead Type -->
+            <template if:true={isMasterAgentList}>
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <a class="link" onclick={handleMasterBackToLeadTypes}>← Lead types</a>
+                    &nbsp;›&nbsp; {masterSelectedLeadTypeLabel} <span class="count">— agents</span>
+                  </div>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                  <table class="slds-table">
+                    <thead>
+                      <tr><th>Agent</th><th class="num">Calls</th><th class="num">Avg score</th><th class="num">Fatal</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={masterAgentGroups} for:item="ag">
+                        <tr key={ag.key} data-key={ag.key} onclick={handleMasterAgentSelect} class="row-clickable">
+                          <td><a class="link">{ag.label}</a></td>
+                          <td class="num">{ag.count}</td>
+                          <td class="num"><span class={ag.statusClass}>{ag.avgDisplay}</span></td>
+                          <td class="num">{ag.fatalLabel}</td>
+                          <td class="num"><button class="btn btn-sm" data-key={ag.key} onclick={handleMasterAgentSelect}>View calls →</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <!-- L3: individual call records for selected Lead Type + Agent -->
+            <template if:true={isMasterRecordList}>
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">
+                    <a class="link" onclick={handleMasterBackToLeadTypes}>← Lead types</a>
+                    &nbsp;›&nbsp; <a class="link" onclick={handleMasterBackToAgents}>{masterSelectedLeadTypeLabel}</a>
+                    &nbsp;›&nbsp; {masterSelectedAgentName} <span class="count">— calls</span>
+                  </div>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                  <table class="slds-table">
+                    <thead>
+                      <tr><th>Lead</th><th class="num">Score</th><th>Status</th><th>Sentiment</th><th>Weakest</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={masterRecordRows} for:item="r">
+                        <tr key={r.leadId} data-leadid={r.leadId} onclick={handleMasterRecordOpen} class="row-clickable">
+                          <td><a class="link">{r.name}</a></td>
+                          <td class="num"><span class={r.statusBadgeClass}>{r.scoreDisplay}</span></td>
+                          <td>{r.statusLabel}</td>
+                          <td>{r.sentiment}</td>
+                          <td>{r.weakest}</td>
+                          <td class="num"><button class="btn btn-sm" data-leadid={r.leadId} onclick={handleMasterRecordOpen}>Open →</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <!-- L4: full individual call analysis -->
+            <template if:true={isMasterCallView}>
+              <div class="page-header" style="margin-top: 0.5rem;">
+                <div class="page-title-block">
+                  <div class="breadcrumbs">
+                    <a class="link" onclick={handleMasterBackToLeadTypes}>Lead types</a>
+                    &rsaquo; <a class="link" onclick={handleMasterBackToAgents}>{masterSelectedLeadTypeLabel}</a>
+                    &rsaquo; <a class="link" onclick={handleMasterBackToRecords}>{masterSelectedAgentName}</a>
+                    &rsaquo; Call analysis
+                  </div>
+                </div>
+                <div class="page-actions">
+                  <button class="btn" onclick={handleOpenLeadRecord}>🔗 Open lead record</button>
+                  <button class="btn" onclick={handleMasterBackToRecords}>← Back to calls</button>
+                </div>
+              </div>
+
+              <template if:true={masterCallDetailLoading}>
+                <div class="card"><div class="card-body loading-block">
+                  <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                  <p class="muted">Loading call analysis&hellip;</p>
+                </div></div>
+              </template>
+
+              <template if:false={masterCallDetailLoading}>
+              <template if:true={masterCallView}>
+                <!-- KPI header cards -->
+                <div class="grid grid-3">
+                  <div class="card kpi">
+                    <div class="kpi-label">⭐ Overall score</div>
+                    <div class="kpi-value">{masterCallView.overallScore}<span style="font-size:14px; color: var(--slds-neutral-50);">/{masterCallView.scoreMax}</span></div>
+                    <div class="kpi-sub"><span class={masterCallView.statusBadgeClass}>{masterCallView.statusLabel}</span></div>
+                  </div>
+                  <div class="card kpi">
+                    <div class="kpi-label">😊 Sentiment</div>
+                    <div class="kpi-value" style="font-size: 22px;">{masterCallView.sentiment}</div>
+                    <div class="kpi-sub">{masterCallView.leadTypeLabel}</div>
+                  </div>
+                  <div class="card kpi">
+                    <div class="kpi-label">🎯 Customer intent</div>
+                    <div class="kpi-value" style="font-size: 16px; font-weight: 600;">{masterCallView.customerIntent}</div>
+                    <div class="kpi-sub">{masterCallView.leadName}</div>
+                  </div>
+                </div>
+
+                <!-- Weighted quality-score banner (real: rescaled from 1–5 params) -->
+                <template if:true={callRubric}>
+                  <div class="mca-rub-banner">
+                    <div>
+                      <div class="mca-rub-banner-label">Weighted quality score</div>
+                      <div class="mca-rub-banner-sub">{callRubric.paramCount} parameters · 1–5 scale</div>
+                    </div>
+                    <div class="mca-rub-banner-score">{callRubric.scaled100}<span> / 100</span></div>
+                  </div>
+                </template>
+
+                <div class="split">
+                  <!-- LEFT: weighted rubric table + recording/transcript (fills the column) -->
+                  <div class="mca-split-col">
+                    <div class="card">
+                      <div class="card-header"><div class="card-title">Quality scores by parameter</div></div>
+                      <template if:true={callRubric}>
+                        <div class="card-body" style="padding: 0;">
+                          <table class="slds-table mca-rub-table">
+                            <thead>
+                              <tr><th>Parameter</th><th class="num">Weight</th><th class="num">Earned</th></tr>
+                            </thead>
+                            <tbody>
+                              <template for:each={callRubric.rows} for:item="r">
+                                <tr key={r.key}>
+                                  <td>
+                                    <div class="mca-rub-param">{r.label}</div>
+                                    <div class="mca-rub-just">{r.justification}</div>
+                                  </td>
+                                  <td class="num mca-rub-weight">{r.weight}</td>
+                                  <td class="num"><span class={r.earnedClass}>{r.earned}</span></td>
+                                </tr>
+                              </template>
+                              <tr class="mca-rub-total">
+                                <td>Total</td>
+                                <td class="num">{callRubric.weightTotal}</td>
+                                <td class="num">{callRubric.earnedTotal}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </template>
+                    </div>
+
+                    <!-- Call recording + transcript (real: MP3 + Audio_Transcription__c) -->
+                    <template if:true={hasCallMedia}>
+                      <div class="card">
+                        <div class="card-header"><div class="card-title">🎧 Call recording &amp; transcript</div></div>
+                        <div class="card-body">
+                          <template if:true={hasCallAudio}>
+                            <audio controls preload="none" src={callAudioUrl} class="mca-audio"></audio>
+                          </template>
+                          <template if:true={hasCallTranscript}>
+                            <div class="mca-transcript">
+                              <template for:each={callTranscriptLines} for:item="ln">
+                                <div key={ln.key} class={ln.rowClass}>
+                                  <template if:true={ln.hasSpeaker}><span class="mca-tr-spk">{ln.speaker}</span></template>
+                                  <span class="mca-tr-txt">{ln.text}</span>
+                                </div>
+                              </template>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Scope of improvement (own card, below recording) -->
+                    <template if:true={masterCallView.hasImprovements}>
+                      <div class="card">
+                        <div class="card-header"><div class="card-title">🎯 Scope of improvement</div></div>
+                        <div class="card-body">
+                          <ul class="mca-soi-list">
+                            <template for:each={masterCallView.improvements} for:item="imp">
+                              <li key={imp.key} class="mca-soi-item">
+                                <span class="mca-soi-num">{imp.num}</span>
+                                <span class="mca-soi-txt">{imp.text}</span>
+                              </li>
+                            </template>
+                          </ul>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- RIGHT: summary, grouped KPIs -->
+                  <div class="card">
+                    <div class="card-header"><div class="card-title">🧾 Interaction summary</div></div>
+                    <div class="card-body">
+                      <p class="summary-style">{masterCallView.summary}</p>
+
+                      <template if:true={callRubric.isFatal}>
+                        <div class="mca-fatal-flag">⚠️ Fatal error — {callRubric.fatalReason}</div>
+                      </template>
+
+                      <template if:true={hasCallKpiSections}>
+                        <div class="card-title" style="margin: 1rem 0 0.5rem;">✅ KPI evaluations</div>
+                        <template for:each={callKpiSections} for:item="sec">
+                          <div key={sec.key} class="mca-kpisec">
+                            <button type="button" class="mca-kpisec-head" data-key={sec.key} data-open={sec.open} onclick={handleKpiToggle}>
+                              <span class="mca-kpisec-caret">{sec.caret}</span>
+                              <span class="mca-kpisec-title">{sec.title}</span>
+                              <span class="mca-kpisec-count">{sec.count}</span>
+                            </button>
+                            <div class={sec.bodyClass}>
+                              <template for:each={sec.groups} for:item="grp">
+                                <div key={grp.key} class="mca-kpigrp">
+                                  <button type="button" class={grp.headClass} data-key={grp.key} data-open={grp.open} onclick={handleKpiToggle}>
+                                    <span class="mca-kpigrp-caret">{grp.caret}</span>
+                                    <span>{grp.icon} {grp.label}</span>
+                                    <span class="mca-kpigrp-count">{grp.count}</span>
+                                  </button>
+                                  <div class={grp.bodyClass}>
+                                    <template for:each={grp.rows} for:item="kpi">
+                                      <div key={kpi.key} class="mca-kpigrp-row">
+                                        <div class="mca-kpigrp-q">{kpi.question}</div>
+                                        <div class="mca-kpigrp-just">{kpi.justification}</div>
+                                        <template if:true={kpi.evidence}><div class="mca-kpigrp-ev">“{kpi.evidence}”</div></template>
+                                      </div>
+                                    </template>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                        </template>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <template if:false={masterCallView}>
+                <div class="card"><div class="card-body">
+                  <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p class="strong">No analysis available for this call</p>
+                  </div>
+                </div></div>
+              </template>
+              </template>
+            </template>
+
+          </div><!-- /mca-overview -->
+          </template>
+          </template>
+
+        </div>
+        </template>
+
+        <!-- ================================================================== -->
+        <!-- SCREEN 2: TEAM LEAD DASHBOARD                                       -->
+        <!-- ================================================================== -->
+        <template if:true={isTeam}>
+        <div class="page mca-overview">
+
+          <!-- Loading / empty states reuse the master data load -->
+          <template if:true={masterLoading}>
+            <div class="card"><div class="card-body loading-block">
+              <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+              <p class="muted">Aggregating analysed calls&hellip;</p>
+            </div></div>
+          </template>
+
+          <template if:false={masterLoading}>
+          <template if:false={hasTeamData}>
+            <div class="card"><div class="card-body">
+              <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <p class="strong">No analysed calls yet</p>
+                <p class="muted">No leads have analysed calls in this date range yet.</p>
+              </div>
+            </div></div>
+          </template>
+
+          <template if:true={hasTeamData}>
+
+            <!-- ===== L1: Agent leaderboard ===== -->
+            <template if:true={isTeamAgentList}>
+              <!-- ===== HERO (shared design system, team-flavoured) ===== -->
+              <div class="mca-hero mca-hero-slim">
+                <div class="mca-hero-left">
+                  <span class="mca-hero-ico"><lightning-icon icon-name="utility:groups" variant="inverse" size="small"></lightning-icon></span>
+                  <div>
+                    <div class="mca-hero-title-row">
+                      <div class="mca-hero-title">Team Dashboard</div>
+                    </div>
+                    <div class="mca-hero-desc">Quality &amp; coaching signals across your agents</div>
+                  </div>
+                </div>
+                <span class="mca-hero-chip">{teamAgentCount} agents · {masterTotalCalls} calls · {masterFilterLabel}</span>
+              </div>
+
+              <!-- Team KPI row -->
+              <div class="grid grid-4">
+                <div class="card kpi">
+                  <div class="kpi-label">🔢 Calls analysed</div>
+                  <div class="kpi-value">{teamTotalCalls}</div>
+                  <div class="kpi-sub">{masterFilterLabel}</div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">👥 Agents</div>
+                  <div class="kpi-value">{teamAgentCount}</div>
+                  <div class="kpi-sub">with analysed calls</div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">⭐ Team quality score</div>
+                  <div class="kpi-value">{teamAvgDisplay.value}<span style="font-size:14px; color: var(--slds-neutral-50);">/{teamAvgDisplay.max}</span></div>
+                  <div class="kpi-sub">{teamAvgDisplay.percent}% of scale</div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">⚠️ Fatal interactions</div>
+                  <div class="kpi-value" style="color: var(--slds-error);">{teamFatalCount}</div>
+                  <div class="kpi-sub">across analysed calls</div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Agent performance <span class="count">— tap an agent for their analysis</span></div>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                  <table class="slds-table">
+                    <thead>
+                      <tr>
+                        <th>Agent</th>
+                        <th class="num">Calls</th>
+                        <th class="num">Avg score</th>
+                        <th>Weakest parameter</th>
+                        <th class="num">Fatal</th>
+                        <th class="num">Positive</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={teamLeaderboard} for:item="ag">
+                        <tr key={ag.key} class="row-clickable" data-key={ag.key} onclick={handleTeamAgentSelect}>
+                          <td><span class="name-cell"><span class="avatar avatar-blue">{ag.initials}</span> <a class="link">{ag.name}</a></span></td>
+                          <td class="num">{ag.count}</td>
+                          <td class="num"><span class={ag.scoreBadgeClass}>{ag.avgDisplay}</span></td>
+                          <td>{ag.weakest}</td>
+                          <td class="num">{ag.fatalCount}</td>
+                          <td class="num">{ag.sentimentPct}</td>
+                          <td class="num"><button class="btn btn-sm" data-key={ag.key} onclick={handleTeamAgentSelect}>View →</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Coaching priorities — real, ranked from the leaderboard -->
+              <template if:true={hasTeamCoachingPriorities}>
+                <div class="card">
+                  <div class="card-header"><div class="card-title">🎯 Coaching priorities <span class="count">— agents who need attention first</span></div></div>
+                  <div class="card-body">
+                    <div class="mca-cprio">
+                      <template for:each={teamCoachingPriorities} for:item="p">
+                        <div key={p.key} class="mca-cprio-card" style={p.cardStyle} data-key={p.key} onclick={handleTeamPriorityOpen}>
+                          <span class="mca-cprio-avatar" style={p.dotStyle}>{p.initials}</span>
+                          <div class="mca-cprio-body">
+                            <div class="mca-cprio-top">
+                              <span class="mca-cprio-name">{p.name}</span>
+                              <span class={p.scoreBadgeClass}>{p.avgDisplay}</span>
+                            </div>
+                            <div class="mca-cprio-reason">{p.reason}</div>
+                          </div>
+                          <span class="mca-cprio-go">View →</span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Team score-by-parameter matrix (agent × 6 params) -->
+              <template if:true={hasTeamMatrix}>
+                <div class="card">
+                  <div class="card-header"><div class="card-title">Team score by parameter <span class="count">— averaged per agent (1–5 scale)</span></div></div>
+                  <div class="card-body" style="padding: 0;">
+                    <table class="slds-table mca-matrix">
+                      <thead>
+                        <tr>
+                          <th>Agent</th>
+                          <template for:each={teamMatrixColumns} for:item="col">
+                            <th key={col.key} class="num">{col.label}</th>
+                          </template>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template for:each={teamMatrixRows} for:item="row">
+                          <tr key={row.key}>
+                            <td><span class="name-cell"><span class="avatar avatar-blue">{row.initials}</span> {row.name}</span></td>
+                            <template for:each={row.cells} for:item="cell">
+                              <td key={cell.key} class="num"><span class={cell.chipClass}>{cell.display}</span></td>
+                            </template>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </template>
+            </template>
+
+            <!-- ===== L2: Single-agent high-level analysis ===== -->
+            <template if:true={isTeamAgentView}>
+              <div class="page-header" style="margin-top: 0.5rem;">
+                <div class="page-title-block">
+                  <div class="breadcrumbs">
+                    <a class="link" onclick={handleTeamBackToAgents}>My Team</a> &rsaquo; {teamSelectedAgentName}
+                  </div>
+                  <h1>🧑‍💼 {teamSelectedAgentName}</h1>
+                  <div class="subtitle">High-level performance across {teamAgentSummary.callCount} analysed call(s)</div>
+                </div>
+                <div class="page-actions">
+                  <button class="btn" onclick={handleTeamBackToAgents}>← Back to team</button>
+                </div>
+              </div>
+
+              <!-- Agent KPI tiles -->
+              <div class="grid grid-4">
+                <div class="card kpi">
+                  <div class="kpi-label">🔢 Calls analysed</div>
+                  <div class="kpi-value">{teamAgentSummary.callCount}</div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">⭐ Avg score</div>
+                  <div class="kpi-value">{teamAgentSummary.avgDisplay}<span style="font-size:14px; color: var(--slds-neutral-50);">/{teamAgentSummary.scoreMax}</span></div>
+                  <div class="kpi-sub"><span class={teamAgentSummary.scoreBadgeClass}>{teamAgentSummary.avgDisplay}</span></div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">😊 Positive sentiment</div>
+                  <div class="kpi-value">{teamAgentSummary.positivePct}%</div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">⚠️ Fatal interactions</div>
+                  <div class="kpi-value" style="color: var(--slds-error);">{teamAgentSummary.fatalCount}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-3-2">
+                <!-- Score by parameter for this agent -->
+                <div class="card">
+                  <div class="card-header"><div class="card-title">Quality score by parameter</div></div>
+                  <div class="card-body">
+                    <template for:each={teamAgentParameterRows} for:item="p">
+                      <div key={p.key} class="score-row">
+                        <span class="name">{p.label}</span>
+                        <div class="bar"><div class="bar-fill" style={p.barStyle}></div></div>
+                        <span class="val">{p.valueDisplay}</span>
+                      </div>
+                    </template>
+                    <div class="chart-caption"><span>Averaged across this agent's analysed calls (1–5 scale)</span></div>
+                  </div>
+                </div>
+
+                <!-- This agent's call records -->
+                <div class="card">
+                  <div class="card-header"><div class="card-title">🗂️ Audited calls <span class="count">— {teamAgentSummary.callCount}</span></div></div>
+                  <div class="card-body" style="padding: 0;">
+                    <table class="slds-table">
+                      <thead>
+                        <tr><th>Lead</th><th>Journey</th><th class="num">Score</th><th>Sentiment</th><th></th></tr>
+                      </thead>
+                      <tbody>
+                        <template for:each={teamAgentRecordRows} for:item="r">
+                          <tr key={r.leadId} class="row-clickable" data-leadid={r.leadId} onclick={handleTeamRecordOpen}>
+                            <td><a class="link">{r.name}</a></td>
+                            <td>{r.leadTypeLabel}</td>
+                            <td class="num"><span class={r.statusBadgeClass}>{r.scoreDisplay}</span></td>
+                            <td>{r.sentiment}</td>
+                            <td class="num"><button class="btn btn-sm" data-leadid={r.leadId} onclick={handleTeamRecordOpen}>Open →</button></td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rubric compliance — KPI adherence rolled up across ALL this agent's calls -->
+              <template if:true={agentRubricLoading}>
+                <div class="card"><div class="card-body"><div class="chart-caption"><span>Loading rubric compliance…</span></div></div></div>
+              </template>
+              <template if:true={hasAgentRubric}>
+                <div class="card mca-rubric">
+                  <div class="card-header mca-rub-head">
+                    <div class="card-title">🎯 Rubric compliance across {agentRubric.callCount} analysed call(s)</div>
+                    <div class="mca-rub-headmeta">
+                      <span>% of audits earning full weight</span>
+                      <span class="mca-rub-overall" style={agentRubricOverall.pillStyle}>Overall {agentRubricOverall.pct}</span>
+                    </div>
+                  </div>
+                  <div class="card-body mca-rub-body">
+                    <template for:each={agentRubricCategories} for:item="cat">
+                      <div key={cat.key} class="mca-rub-cat">
+                        <div class="mca-rub-cathead">
+                          <span class="mca-rub-catname">{cat.icon} {cat.name}</span>
+                          <span class="mca-rub-catmeta">
+                            <span style={cat.headerStyle}>{cat.headerLabel}</span>
+                            <template if:true={cat.isWeakest}><span class="mca-rub-weakest">— weakest area</span></template>
+                          </span>
+                        </div>
+                        <template for:each={cat.subParams} for:item="s">
+                          <div key={s.code} class="mca-rub-row">
+                            <span class="mca-rub-code">{s.code}</span>
+                            <span class="mca-rub-q">
+                              {s.question}
+                              <template if:true={s.critical}><span class="mca-rub-crit">CRITICAL</span></template>
+                            </span>
+                            <span class="mca-rub-score" title={s.title}>{s.weightLabel}</span>
+                            <span class="mca-rub-bar"><span class="mca-rub-bar-fill" style={s.barStyle}></span></span>
+                            <span class="mca-rub-pct" style={s.metStyle}>{s.metPct}</span>
+                            <span class="mca-rub-sparkwrap">
+                              <template if:true={s.hasSpark}>
+                                <svg class="mca-rub-spark" viewBox="0 0 64 22" preserveAspectRatio="none">
+                                  <polyline points={s.sparkPoints} fill="none" stroke={s.sparkColor} stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                                </svg>
+                              </template>
+                            </span>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
+                    <div class="chart-caption"><span>Score = average 1–5 across this agent's calls · Compliance = % of applicable calls meeting the KPI (Yes + ½ Partial) · sparkline plots running compliance over call dates. Documentation items are not audio-observable (NA).</span></div>
+                  </div>
+                </div>
+              </template>
+            </template>
+
+            <!-- ===== L3: Individual call analysis (reuses master call view) ===== -->
+            <template if:true={isTeamCallView}>
+              <div class="page-header" style="margin-top: 0.5rem;">
+                <div class="page-title-block">
+                  <div class="breadcrumbs">
+                    <a class="link" onclick={handleTeamBackToAgents}>My Team</a>
+                    &rsaquo; <a class="link" onclick={handleTeamBackToAgent}>{teamSelectedAgentName}</a>
+                    &rsaquo; Call analysis
+                  </div>
+                </div>
+                <div class="page-actions">
+                  <button class="btn" onclick={handleOpenLeadRecord}>🔗 Open lead record</button>
+                  <button class="btn" onclick={handleTeamBackToAgent}>← Back to calls</button>
+                </div>
+              </div>
+
+              <template if:true={masterCallDetailLoading}>
+                <div class="card"><div class="card-body loading-block">
+                  <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                  <p class="muted">Loading call analysis&hellip;</p>
+                </div></div>
+              </template>
+
+              <template if:false={masterCallDetailLoading}>
+              <template if:true={masterCallView}>
+                <div class="grid grid-3">
+                  <div class="card kpi">
+                    <div class="kpi-label">⭐ Overall score</div>
+                    <div class="kpi-value">{masterCallView.overallScore}<span style="font-size:14px; color: var(--slds-neutral-50);">/{masterCallView.scoreMax}</span></div>
+                    <div class="kpi-sub"><span class={masterCallView.statusBadgeClass}>{masterCallView.statusLabel}</span></div>
+                  </div>
+                  <div class="card kpi">
+                    <div class="kpi-label">😊 Sentiment</div>
+                    <div class="kpi-value" style="font-size: 22px;">{masterCallView.sentiment}</div>
+                    <div class="kpi-sub">{masterCallView.leadTypeLabel}</div>
+                  </div>
+                  <div class="card kpi">
+                    <div class="kpi-label">🎯 Customer intent</div>
+                    <div class="kpi-value" style="font-size: 16px; font-weight: 600;">{masterCallView.customerIntent}</div>
+                    <div class="kpi-sub">{masterCallView.leadName}</div>
+                  </div>
+                </div>
+
+                <!-- Weighted quality-score banner (real: rescaled from 1–5 params) -->
+                <template if:true={callRubric}>
+                  <div class="mca-rub-banner">
+                    <div>
+                      <div class="mca-rub-banner-label">Weighted quality score</div>
+                      <div class="mca-rub-banner-sub">{callRubric.paramCount} parameters · 1–5 scale</div>
+                    </div>
+                    <div class="mca-rub-banner-score">{callRubric.scaled100}<span> / 100</span></div>
+                  </div>
+                </template>
+
+                <div class="split">
+                  <!-- LEFT: weighted rubric table + recording/transcript (fills the column) -->
+                  <div class="mca-split-col">
+                    <div class="card">
+                      <div class="card-header"><div class="card-title">Quality scores by parameter</div></div>
+                      <template if:true={callRubric}>
+                        <div class="card-body" style="padding: 0;">
+                          <table class="slds-table mca-rub-table">
+                            <thead>
+                              <tr><th>Parameter</th><th class="num">Weight</th><th class="num">Earned</th></tr>
+                            </thead>
+                            <tbody>
+                              <template for:each={callRubric.rows} for:item="r">
+                                <tr key={r.key}>
+                                  <td>
+                                    <div class="mca-rub-param">{r.label}</div>
+                                    <div class="mca-rub-just">{r.justification}</div>
+                                  </td>
+                                  <td class="num mca-rub-weight">{r.weight}</td>
+                                  <td class="num"><span class={r.earnedClass}>{r.earned}</span></td>
+                                </tr>
+                              </template>
+                              <tr class="mca-rub-total">
+                                <td>Total</td>
+                                <td class="num">{callRubric.weightTotal}</td>
+                                <td class="num">{callRubric.earnedTotal}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </template>
+                    </div>
+
+                    <!-- Call recording + transcript (real: MP3 + Audio_Transcription__c) -->
+                    <template if:true={hasCallMedia}>
+                      <div class="card">
+                        <div class="card-header"><div class="card-title">🎧 Call recording &amp; transcript</div></div>
+                        <div class="card-body">
+                          <template if:true={hasCallAudio}>
+                            <audio controls preload="none" src={callAudioUrl} class="mca-audio"></audio>
+                          </template>
+                          <template if:true={hasCallTranscript}>
+                            <div class="mca-transcript">
+                              <template for:each={callTranscriptLines} for:item="ln">
+                                <div key={ln.key} class={ln.rowClass}>
+                                  <template if:true={ln.hasSpeaker}><span class="mca-tr-spk">{ln.speaker}</span></template>
+                                  <span class="mca-tr-txt">{ln.text}</span>
+                                </div>
+                              </template>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Scope of improvement (own card, below recording) -->
+                    <template if:true={masterCallView.hasImprovements}>
+                      <div class="card">
+                        <div class="card-header"><div class="card-title">🎯 Scope of improvement</div></div>
+                        <div class="card-body">
+                          <ul class="mca-soi-list">
+                            <template for:each={masterCallView.improvements} for:item="imp">
+                              <li key={imp.key} class="mca-soi-item">
+                                <span class="mca-soi-num">{imp.num}</span>
+                                <span class="mca-soi-txt">{imp.text}</span>
+                              </li>
+                            </template>
+                          </ul>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <div class="card">
+                    <div class="card-header"><div class="card-title">🧾 Interaction summary</div></div>
+                    <div class="card-body">
+                      <p class="summary-style">{masterCallView.summary}</p>
+
+                      <template if:true={callRubric.isFatal}>
+                        <div class="mca-fatal-flag">⚠️ Fatal error — {callRubric.fatalReason}</div>
+                      </template>
+
+                      <template if:true={hasCallKpiSections}>
+                        <div class="card-title" style="margin: 1rem 0 0.5rem;">✅ KPI evaluations</div>
+                        <template for:each={callKpiSections} for:item="sec">
+                          <div key={sec.key} class="mca-kpisec">
+                            <button type="button" class="mca-kpisec-head" data-key={sec.key} data-open={sec.open} onclick={handleKpiToggle}>
+                              <span class="mca-kpisec-caret">{sec.caret}</span>
+                              <span class="mca-kpisec-title">{sec.title}</span>
+                              <span class="mca-kpisec-count">{sec.count}</span>
+                            </button>
+                            <div class={sec.bodyClass}>
+                              <template for:each={sec.groups} for:item="grp">
+                                <div key={grp.key} class="mca-kpigrp">
+                                  <button type="button" class={grp.headClass} data-key={grp.key} data-open={grp.open} onclick={handleKpiToggle}>
+                                    <span class="mca-kpigrp-caret">{grp.caret}</span>
+                                    <span>{grp.icon} {grp.label}</span>
+                                    <span class="mca-kpigrp-count">{grp.count}</span>
+                                  </button>
+                                  <div class={grp.bodyClass}>
+                                    <template for:each={grp.rows} for:item="kpi">
+                                      <div key={kpi.key} class="mca-kpigrp-row">
+                                        <div class="mca-kpigrp-q">{kpi.question}</div>
+                                        <div class="mca-kpigrp-just">{kpi.justification}</div>
+                                        <template if:true={kpi.evidence}><div class="mca-kpigrp-ev">“{kpi.evidence}”</div></template>
+                                      </div>
+                                    </template>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                        </template>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <template if:false={masterCallView}>
+                <div class="card"><div class="card-body">
+                  <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p class="strong">No analysis available for this call</p>
+                  </div>
+                </div></div>
+              </template>
+              </template>
+            </template>
+
+          </template>
+          </template>
+
+        </div>
+        </template>
+
+        <!-- ================================================================== -->
+        <!-- SCREEN 4: SCORECARD (isAgent) — real single-agent view (Apex)      -->
+        <!-- ================================================================== -->
+        <template if:true={isAgent}>
+        <div class="page mca-overview">
+
+          <template if:true={masterLoading}>
+            <div class="card"><div class="card-body loading-block">
+              <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+              <p class="muted">Aggregating analysed calls&hellip;</p>
+            </div></div>
+          </template>
+
+          <template if:false={masterLoading}>
+          <template if:false={hasScorecardData}>
+            <div class="card"><div class="card-body">
+              <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <p class="strong">No analysed calls yet</p>
+                <p class="muted">No leads have analysed calls in this date range yet.</p>
+              </div>
+            </div></div>
+          </template>
+
+          <template if:true={hasScorecardData}>
+
+            <!-- ===== Agent picker ===== -->
+            <template if:true={isScorecardPicker}>
+              <!-- ===== HERO (shared design system, scorecard-flavoured) ===== -->
+              <div class="mca-hero mca-hero-slim">
+                <div class="mca-hero-left">
+                  <span class="mca-hero-ico"><lightning-icon icon-name="utility:people_score" variant="inverse" size="small"></lightning-icon></span>
+                  <div>
+                    <div class="mca-hero-title-row">
+                      <div class="mca-hero-title">Agent Scorecard</div>
+                    </div>
+                    <div class="mca-hero-desc">Per-agent quality scorecards across analysed calls</div>
+                  </div>
+                </div>
+                <span class="mca-hero-chip">{teamAgentCount} agents · {masterTotalCalls} calls · {masterFilterLabel}</span>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Choose an agent <span class="count">— tap for their scorecard</span></div>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                  <table class="slds-table">
+                    <thead>
+                      <tr>
+                        <th>Agent</th>
+                        <th class="num">Calls</th>
+                        <th class="num">Avg score</th>
+                        <th>Weakest parameter</th>
+                        <th class="num">Positive</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={scorecardAgents} for:item="ag">
+                        <tr key={ag.key} class="row-clickable" data-key={ag.key} onclick={handleScorecardSelect}>
+                          <td><span class="name-cell"><span class="avatar avatar-blue">{ag.initials}</span> <a class="link">{ag.name}</a></span></td>
+                          <td class="num">{ag.count}</td>
+                          <td class="num"><span class={ag.scoreBadgeClass}>{ag.avgDisplay}</span></td>
+                          <td>{ag.weakest}</td>
+                          <td class="num">{ag.sentimentPct}</td>
+                          <td class="num"><button class="btn btn-sm" data-key={ag.key} onclick={handleScorecardSelect}>View →</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <!-- ===== Single-agent scorecard ===== -->
+            <template if:true={isScorecardDetail}>
+              <div class="page-header" style="margin-top: 0.5rem;">
+                <div class="page-title-block">
+                  <div class="breadcrumbs">
+                    <a class="link" onclick={handleScorecardBack}>Scorecard</a> &rsaquo; {scorecardSelectedAgentName}
+                  </div>
+                  <h1>🧑‍💼 {scorecardSelectedAgentName}</h1>
+                  <div class="subtitle">Performance across {scorecardSummary.callCount} analysed call(s)</div>
+                </div>
+                <div class="page-actions">
+                  <button class="btn" onclick={handleScorecardBack}>← Back to agents</button>
+                </div>
+              </div>
+
+              <!-- KPI tiles -->
+              <div class="grid grid-4">
+                <div class="card kpi">
+                  <div class="kpi-label">🔢 Calls analysed</div>
+                  <div class="kpi-value">{scorecardSummary.callCount}</div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">⭐ Avg score</div>
+                  <div class="kpi-value">{scorecardSummary.avgDisplay}<span style="font-size:14px; color: var(--slds-neutral-50);">/{scorecardSummary.scoreMax}</span></div>
+                  <div class="kpi-sub"><span class={scorecardSummary.scoreBadgeClass}>{scorecardSummary.avgDisplay}</span></div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">💪 Strongest</div>
+                  <div class="kpi-value" style="font-size: 15px; font-weight: 600;">{scorecardHighlights.strongest}</div>
+                  <div class="kpi-sub">🎯 Weakest: {scorecardHighlights.weakest}</div>
+                </div>
+                <div class="card kpi">
+                  <div class="kpi-label">😊 Positive sentiment</div>
+                  <div class="kpi-value">{scorecardSummary.positivePct}%</div>
+                  <div class="kpi-sub">⚠️ {scorecardSummary.fatalCount} fatal</div>
+                </div>
+              </div>
+
+              <div class="grid grid-3-2">
+                <!-- Score by parameter -->
+                <div class="card">
+                  <div class="card-header"><div class="card-title">Quality score by parameter</div></div>
+                  <div class="card-body">
+                    <template for:each={scorecardParameterRows} for:item="p">
+                      <div key={p.key} class="score-row">
+                        <span class="name">{p.label}</span>
+                        <div class="bar"><div class="bar-fill" style={p.barStyle}></div></div>
+                        <span class="val">{p.valueDisplay}</span>
+                      </div>
+                    </template>
+                    <div class="chart-caption"><span>Averaged across this agent's analysed calls (1–5 scale)</span></div>
+                  </div>
+                </div>
+
+                <!-- Coaching feed (real per-call improvement notes) -->
+                <div class="card">
+                  <div class="card-header"><div class="card-title">🎯 Coaching feed <span class="count">— from scope-of-improvement</span></div></div>
+                  <div class="card-body">
+                    <template if:true={hasScorecardCoaching}>
+                      <div class="mca-coach">
+                        <template for:each={scorecardCoaching} for:item="g">
+                          <div key={g.key} class="mca-coach-group">
+                            <button class="mca-coach-head" style={g.headStyle} data-key={g.key} data-open={g.open} onclick={handleCoachToggle}>
+                              <span class="mca-coach-caret">{g.caret}</span>
+                              <span class="mca-coach-dot" style={g.dotStyle}></span>
+                              <span class="mca-coach-theme">{g.theme}</span>
+                              <span class="mca-coach-count">{g.countLabel}</span>
+                            </button>
+                            <div class={g.bodyClass}>
+                              <div class="mca-coach-grid">
+                                <template for:each={g.notes} for:item="n">
+                                  <div key={n.key} class="mca-coach-item">
+                                    <div class="mca-coach-text">{n.text}</div>
+                                    <div class="mca-coach-ctx">{n.context}</div>
+                                  </div>
+                                </template>
+                              </div>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
+                    <template if:false={hasScorecardCoaching}>
+                      <p class="muted">No improvement notes recorded for this agent's calls.</p>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- This agent's calls -->
+              <div class="card">
+                <div class="card-header"><div class="card-title">🗂️ Analysed calls <span class="count">— {scorecardSummary.callCount}</span></div></div>
+                <div class="card-body" style="padding: 0;">
+                  <table class="slds-table">
+                    <thead>
+                      <tr><th>Lead</th><th>Journey</th><th class="num">Score</th><th>Sentiment</th><th>Weakest</th></tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={scorecardRecordRows} for:item="r">
+                        <tr key={r.leadId}>
+                          <td>{r.name}</td>
+                          <td>{r.leadTypeLabel}</td>
+                          <td class="num"><span class={r.statusBadgeClass}>{r.scoreDisplay}</span></td>
+                          <td>{r.sentiment}</td>
+                          <td>{r.weakest}</td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+          </template>
+          </template>
+
+        </div>
+        </template>
+
+        <!-- ================================================================== -->
+        <!-- SCREEN 6: BUSINESS INSIGHTS (isInsights) — JSON-derivable only     -->
+        <!-- ================================================================== -->
+        <template if:true={isInsights}>
+        <div class="page mca-overview">
+
+          <!-- ===== HERO (shared design system, insights-flavoured) ===== -->
+          <template if:true={hasInsightsData}>
+            <div class="mca-hero">
+              <div class="mca-hero-left">
+                <span class="mca-hero-ico"><lightning-icon icon-name="utility:calculated_insights" variant="inverse" size="small"></lightning-icon></span>
+                <div>
+                  <div class="mca-hero-title-row">
+                    <div class="mca-hero-title">Business Insights</div>
+                  </div>
+                  <div class="mca-hero-desc">Quality, sentiment &amp; coaching signals across analysed calls</div>
+                  <span class="mca-hero-chip">{masterTotalCalls} calls · {masterFilterLabel}</span>
+                </div>
+              </div>
+
+              <div class="mca-hero-mid">
+                <div class="mca-hero-mid-label">Customer sentiment mix</div>
+                <template for:each={insightsHero.rows} for:item="h">
+                  <div key={h.key} class="mca-hero-row">
+                    <span class="mca-hero-row-name">{h.label}</span>
+                    <div class="mca-hero-row-track"><div class="mca-hero-row-fill" style={h.barStyle}></div></div>
+                    <span class="mca-hero-row-val">{h.value}</span>
+                  </div>
+                </template>
+              </div>
+
+              <div class="mca-hero-right">
+                <div class="mca-hero-right-label">Positive sentiment</div>
+                <div class="mca-hero-donut">
+                  <svg width="96" height="96" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="7"></circle>
+                    <circle cx="40" cy="40" r="32" fill="none" stroke-width="7" stroke-linecap="round"
+                      transform="rotate(-90 40 40)" style={insightsHero.ringStyle}></circle>
+                  </svg>
+                  <div class="mca-hero-donut-inner">
+                    <span class="mca-hero-donut-val">{insightsHero.donutVal}</span>
+                    <span class="mca-hero-donut-max">{insightsHero.donutSub}</span>
+                  </div>
+                </div>
+                <span class="mca-hero-pill" style={insightsHero.pillStyle}>{insightsHero.bandLabel}</span>
+              </div>
+            </div>
+          </template>
+
+          <template if:true={masterLoading}>
+            <div class="card"><div class="card-body loading-block">
+              <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+              <p class="muted">Aggregating analysed calls&hellip;</p>
+            </div></div>
+          </template>
+
+          <template if:false={masterLoading}>
+          <template if:false={hasInsightsData}>
+            <div class="card"><div class="card-body">
+              <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <p class="strong">No analysed calls yet</p>
+                <p class="muted">No leads have analysed calls in this date range yet.</p>
+              </div>
+            </div></div>
+          </template>
+
+          <template if:true={hasInsightsData}>
+
+            <!-- KPI row -->
+            <div class="grid grid-4">
+              <div class="card kpi">
+                <div class="kpi-label">🔢 Calls analysed</div>
+                <div class="kpi-value">{masterTotalCalls}</div>
+                <div class="kpi-sub">{masterFilterLabel}</div>
+              </div>
+              <div class="card kpi">
+                <div class="kpi-label">⭐ Quality score</div>
+                <div class="kpi-value">{masterAvgDisplay.value}<span style="font-size:14px; color: var(--slds-neutral-50);">/{masterAvgDisplay.max}</span></div>
+                <div class="kpi-sub">{masterAvgDisplay.percent}% of scale</div>
+              </div>
+              <div class="card kpi">
+                <div class="kpi-label">😊 Positive sentiment</div>
+                <div class="kpi-value">{insightsSentiment.positivePct}%</div>
+                <div class="kpi-sub">{insightsSentiment.positive} positive · {insightsSentiment.negative} negative</div>
+              </div>
+              <div class="card kpi">
+                <div class="kpi-label">⚠️ Fatal interactions</div>
+                <div class="kpi-value" style="color: var(--slds-error);">{masterFatalCount}</div>
+                <div class="kpi-sub">across analysed calls</div>
+              </div>
+            </div>
+
+            <div class="grid grid-3-2">
+              <!-- Score by lead type -->
+              <div class="card">
+                <div class="card-header"><div class="card-title">Quality score by lead type</div></div>
+                <div class="card-body">
+                  <template if:true={hasInsightsByLeadType}>
+                    <template for:each={insightsByLeadType} for:item="t">
+                      <div key={t.key} class="score-row">
+                        <span class="name">{t.label} <span class="count">({t.countLabel})</span></span>
+                        <div class="bar"><div class="bar-fill" style={t.barStyle}></div></div>
+                        <span class="val">{t.avgDisplay}</span>
+                      </div>
+                    </template>
+                  </template>
+                  <div class="chart-caption"><span>Averaged across analysed calls per journey (1–5 scale)</span></div>
+                </div>
+              </div>
+
+              <!-- Sentiment mix -->
+              <div class="card">
+                <div class="card-header"><div class="card-title">Customer sentiment mix</div></div>
+                <div class="card-body">
+                  <div class="score-row">
+                    <span class="name">😊 Positive</span>
+                    <div class="bar"><div class="bar-fill" style={insightsSentimentBars.positive}></div></div>
+                    <span class="val">{insightsSentiment.positivePct}%</span>
+                  </div>
+                  <div class="score-row">
+                    <span class="name">😐 Neutral</span>
+                    <div class="bar"><div class="bar-fill" style={insightsSentimentBars.neutral}></div></div>
+                    <span class="val">{insightsSentiment.neutralPct}%</span>
+                  </div>
+                  <div class="score-row">
+                    <span class="name">😟 Negative</span>
+                    <div class="bar"><div class="bar-fill" style={insightsSentimentBars.negative}></div></div>
+                    <span class="val">{insightsSentiment.negativePct}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weakest-parameter distribution -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">Most common weakest parameter <span class="count">— where coaching is needed most</span></div></div>
+              <div class="card-body">
+                <template if:true={hasInsightsWeakestDist}>
+                  <template for:each={insightsWeakestDist} for:item="w">
+                    <div key={w.key} class="score-row">
+                      <span class="name">{w.label}</span>
+                      <div class="bar"><div class="bar-fill" style={w.barStyle}></div></div>
+                      <span class="val">{w.countLabel}</span>
+                    </div>
+                  </template>
+                </template>
+                <template if:false={hasInsightsWeakestDist}>
+                  <p class="muted">No scored calls in this range.</p>
+                </template>
+              </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- ◇ ILLUSTRATIVE PANELS (MOCK — fixed sample data, no live      -->
+            <!-- source field yet). The ◇ glyph in each title marks these as   -->
+            <!-- illustrative; they do NOT change with the record set.         -->
+            <!-- ============================================================ -->
+            <!-- ◇ Row A: Top categories · Design trends · Product gaps -->
+            <div class="grid grid-3">
+              <div class="card">
+                <div class="card-header"><div class="card-title">Top requested categories ◇</div></div>
+                <div class="card-body">
+                  <template for:each={mockTopCategories} for:item="c">
+                    <div key={c.key} class="score-row">
+                      <span class="name">{c.label}</span>
+                      <div class="bar"><div class="bar-fill" style={c.barStyle}></div></div>
+                      <span class="val">{c.countLabel}</span>
+                    </div>
+                  </template>
+                  <div class="chart-caption"><span>Category asked-about in conversation</span></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header"><div class="card-title">Design preference trends ◇</div></div>
+                <div class="card-body">
+                  <div class="mca-mock-cloud">
+                    <template for:each={mockDesignTrends} for:item="t">
+                      <span key={t.key} class={t.chipClass}>{t.text}</span>
+                    </template>
+                  </div>
+                  <div class="chart-caption"><span>Font size = mention volume · ▲▼ = 30-day trend</span></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header"><div class="card-title">Product gaps &amp; unmet needs ◇</div></div>
+                <div class="card-body">
+                  <template for:each={mockProductGaps} for:item="g">
+                    <div key={g.key} class="mca-mock-gap" style={g.cardStyle}>
+                      <div class="mca-mock-gap-title" style={g.titleStyle}>{g.title}</div>
+                      <div class="mca-mock-gap-desc">{g.desc}</div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- ◇ Row B: Channel split · Fulfilment friction · Drop-off heatmap -->
+            <div class="grid grid-3">
+              <div class="card">
+                <div class="card-header"><div class="card-title">Store vs. digital preference ◇</div></div>
+                <div class="card-body">
+                  <div class="mca-mock-donut-wrap">
+                    <div class="mca-mock-donut">
+                      <svg viewBox="0 0 64 64" class="mca-mock-donut-svg">
+                        <circle cx="32" cy="32" r="28" fill="none" stroke="#EEF1F6" stroke-width="8"></circle>
+                        <template for:each={mockChannelSplit.segments} for:item="s">
+                          <circle key={s.key} cx="32" cy="32" r="28" fill="none" stroke-width="8"
+                            transform="rotate(-90 32 32)" style={s.style}></circle>
+                        </template>
+                      </svg>
+                      <div class="mca-mock-donut-center">
+                        <span class="mca-mock-donut-val">{mockChannelSplit.topPct}</span>
+                        <span class="mca-mock-donut-lbl">{mockChannelSplit.topLabel}</span>
+                      </div>
+                    </div>
+                    <div class="mca-mock-donut-legend">
+                      <template for:each={mockChannelSplit.legend} for:item="c">
+                        <div key={c.key} class="mca-mock-legend-row">
+                          <span class="mca-legend-dot" style={c.dotStyle}></span>
+                          <span class="mca-mock-legend-name">{c.label}</span>
+                          <span class="mca-mock-legend-pct">{c.pctLabel}</span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header"><div class="card-title">Fulfilment friction ◇</div></div>
+                <div class="card-body">
+                  <template for:each={mockFulfilment} for:item="f">
+                    <div key={f.key} class="score-row">
+                      <span class="name">{f.label}</span>
+                      <div class="bar"><div class="bar-fill" style={f.barStyle}></div></div>
+                      <span class="val">{f.countLabel}</span>
+                    </div>
+                  </template>
+                  <div class="chart-caption"><span>Complaints per topic</span></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header"><div class="card-title">Drop-off reasons by channel ◇</div></div>
+                <div class="card-body">
+                  <table class="mca-mock-matrix">
+                    <thead>
+                      <tr><th>Reason</th><th>Call</th><th>Store</th><th>Web</th></tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={mockDropoffMatrix} for:item="r">
+                        <tr key={r.key}>
+                          <td class="mca-mock-matrix-lbl">{r.reason}</td>
+                          <td><span class="mca-mock-cell" style={r.call.style}>{r.call.display}</span></td>
+                          <td><span class="mca-mock-cell" style={r.store.style}>{r.store.display}</span></td>
+                          <td><span class="mca-mock-cell" style={r.web.style}>{r.web.display}</span></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- ◇ Row C: Sentiment heatmap · Positive drivers / Negative triggers -->
+            <div class="grid grid-3-2">
+              <div class="card">
+                <div class="card-header"><div class="card-title">Sentiment across categories &amp; regions ◇</div></div>
+                <div class="card-body">
+                  <table class="mca-mock-matrix">
+                    <thead>
+                      <tr><th>Category</th><th>North</th><th>South</th><th>East</th><th>West</th><th>All-India</th></tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={mockSentimentMatrix} for:item="r">
+                        <tr key={r.key}>
+                          <td class="mca-mock-matrix-lbl">{r.cat}</td>
+                          <td><span class="mca-mock-cell" style={r.north.style}>{r.north.display}</span></td>
+                          <td><span class="mca-mock-cell" style={r.south.style}>{r.south.display}</span></td>
+                          <td><span class="mca-mock-cell" style={r.east.style}>{r.east.display}</span></td>
+                          <td><span class="mca-mock-cell" style={r.west.style}>{r.west.display}</span></td>
+                          <td class="mca-mock-matrix-all">{r.allLabel}</td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="mca-mock-stack">
+                <div class="card">
+                  <div class="card-header">
+                    <div class="card-title">😊 Positive drivers</div>
+                    <div class="card-sub">{insightsVocSubtitle}</div>
+                  </div>
+                  <div class="card-body">
+                    <template if:true={hasInsightsPositiveDrivers}>
+                      <div class="mca-mock-cloud">
+                        <template for:each={insightsPositiveDrivers} for:item="p">
+                          <span key={p.key} class={p.chipClass}>{p.label}</span>
+                        </template>
+                      </div>
+                    </template>
+                    <template if:false={hasInsightsPositiveDrivers}>
+                      <div class="chart-caption"><span>No positive customer cues found in the analysed calls yet.</span></div>
+                    </template>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">
+                    <div class="card-title">⚠️ Negative triggers</div>
+                    <div class="card-sub">From real customer objections</div>
+                  </div>
+                  <div class="card-body">
+                    <template if:true={hasInsightsNegativeTriggers}>
+                      <div class="mca-mock-cloud">
+                        <template for:each={insightsNegativeTriggers} for:item="n">
+                          <span key={n.key} class={n.chipClass}>{n.label}</span>
+                        </template>
+                      </div>
+                    </template>
+                    <template if:false={hasInsightsNegativeTriggers}>
+                      <div class="chart-caption"><span>No customer objections surfaced in the analysed calls.</span></div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Brand keywords word cloud — mined from customer speech -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Keywords customers associate with the brand</div>
+                <div class="card-sub">{insightsVocSubtitle}</div>
+              </div>
+              <div class="card-body">
+                <template if:true={hasInsightsBrandKeywords}>
+                  <div class="mca-mock-cloud mca-mock-cloud-center">
+                    <template for:each={insightsBrandKeywords} for:item="w">
+                      <span key={w.key} class={w.chipClass}>{w.label}</span>
+                    </template>
+                  </div>
+                </template>
+                <template if:false={hasInsightsBrandKeywords}>
+                  <div class="chart-caption"><span>Not enough customer speech captured to build a keyword cloud.</span></div>
+                </template>
+              </div>
+            </div>
+
+            <!-- ◇ Row D: Brand perception vs competitors · Recalled campaigns -->
+            <div class="grid grid-3-2">
+              <div class="card">
+                <div class="card-header"><div class="card-title">Marketing &amp; branding perception vs. competitors ◇</div></div>
+                <div class="card-body">
+                  <table class="mca-mock-matrix">
+                    <thead>
+                      <tr><th>Brand</th><th>Ad recall</th><th>Ad-compelling</th><th>Trust score</th></tr>
+                    </thead>
+                    <tbody>
+                      <template for:each={mockBrandPerception} for:item="r">
+                        <tr key={r.key}>
+                          <td class={r.brandClass}>{r.brand}</td>
+                          <td><span class={r.recall.chipClass}>{r.recall.display}</span></td>
+                          <td><span class={r.compelling.chipClass}>{r.compelling.display}</span></td>
+                          <td><span class={r.trust.chipClass}>{r.trust.display}</span></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header"><div class="card-title">Naturally recalled campaigns ◇</div></div>
+                <div class="card-body">
+                  <template for:each={mockRecalledCampaigns} for:item="c">
+                    <div key={c.key} class="score-row">
+                      <span class="name">{c.label}</span>
+                      <div class="bar"><div class="bar-fill" style={c.barStyle}></div></div>
+                      <span class="val">{c.pctLabel}</span>
+                    </div>
+                  </template>
+                  <div class="chart-caption"><span>Recalled unprompted in customer conversation</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ◇ Store experience & service benchmarking -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">Store experience &amp; service benchmarking ◇</div></div>
+              <div class="card-body">
+                <table class="mca-mock-matrix">
+                  <thead>
+                    <tr><th>Experience dimension</th><th>Aurelia</th><th>Meridian</th><th>Kestrel</th><th>Jovian</th><th>Pinnacle</th><th>Our position</th></tr>
+                  </thead>
+                  <tbody>
+                    <template for:each={mockServiceBenchmark} for:item="r">
+                      <tr key={r.key}>
+                        <td class="mca-mock-matrix-lbl">{r.dim}</td>
+                        <td><span class="mca-mock-cell" style={r.t.style}>{r.t.display}</span></td>
+                        <td><span class="mca-mock-cell" style={r.m.style}>{r.m.display}</span></td>
+                        <td><span class="mca-mock-cell" style={r.k.style}>{r.k.display}</span></td>
+                        <td><span class="mca-mock-cell" style={r.j.style}>{r.j.display}</span></td>
+                        <td><span class="mca-mock-cell" style={r.p.style}>{r.p.display}</span></td>
+                        <td><span class={r.posClass}>{r.pos}</span></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+                <div class="chart-caption"><span>Customer-verbatim-derived score, 1–5</span></div>
+              </div>
+            </div>
+
+            <!-- Sentiment trajectory + KPI adherence -->
+            <div class="grid grid-3-2">
+              <!-- KPI adherence: where behaviours are most often missed -->
+              <div class="card">
+                <div class="card-header"><div class="card-title">Behaviours most often missed <span class="count">— across every scored call</span></div></div>
+                <div class="card-body">
+                  <template if:true={hasInsightsKpiAdherence}>
+                    <template for:each={insightsKpiAdherence} for:item="k">
+                      <div key={k.key} class="mca-kpi-row">
+                        <div class="mca-kpi-top">
+                          <span class="mca-kpi-q">{k.label}</span>
+                          <span class="mca-kpi-tag" style={k.tagStyle}>{k.tagLabel}</span>
+                        </div>
+                        <div class="mca-kpi-track">
+                          <div class="mca-kpi-seg" style={k.yesStyle}></div>
+                          <div class="mca-kpi-seg" style={k.partialStyle}></div>
+                          <div class="mca-kpi-seg" style={k.noStyle}></div>
+                        </div>
+                        <div class="mca-kpi-meta">
+                          <span class="mca-kpi-split">{k.splitLabel}</span>
+                          <span class="mca-kpi-met">{k.metPct} met</span>
+                        </div>
+                      </div>
+                    </template>
+                  </template>
+                  <template if:false={hasInsightsKpiAdherence}>
+                    <p class="muted">No KPI evaluations recorded across these calls.</p>
+                  </template>
+                  <div class="chart-caption"><span>Ranked worst-first · met = full credit for Yes, half for Partial</span></div>
+                </div>
+              </div>
+
+              <!-- Sentiment trajectory: start vs end of call -->
+              <div class="card">
+                <div class="card-header"><div class="card-title">Sentiment trajectory <span class="count">— start → end of call</span></div></div>
+                <div class="card-body">
+                  <template if:true={hasInsightsSentimentJourney}>
+                    <div class="mca-traj-net">
+                      <span class="mca-traj-net-val">{insightsSentimentJourney.netLabel}</span>
+                      <span class="mca-traj-net-lbl">net turnaround</span>
+                    </div>
+                    <div class="score-row">
+                      <span class="name">📈 Improved</span>
+                      <div class="bar"><div class="bar-fill" style={insightsSentimentJourney.improvedBarStyle}></div></div>
+                      <span class="val">{insightsSentimentJourney.improved} · {insightsSentimentJourney.improvedPct}%</span>
+                    </div>
+                    <div class="score-row">
+                      <span class="name">➖ Held steady</span>
+                      <div class="bar"><div class="bar-fill" style={insightsSentimentJourney.heldBarStyle}></div></div>
+                      <span class="val">{insightsSentimentJourney.held} · {insightsSentimentJourney.heldPct}%</span>
+                    </div>
+                    <div class="score-row">
+                      <span class="name">📉 Declined</span>
+                      <div class="bar"><div class="bar-fill" style={insightsSentimentJourney.declinedBarStyle}></div></div>
+                      <span class="val">{insightsSentimentJourney.declined} · {insightsSentimentJourney.declinedPct}%</span>
+                    </div>
+
+                    <!-- Opening vs closing sentiment mix — shows WHERE the turnaround comes from -->
+                    <div class="mca-traj-shift">
+                      <div class="mca-traj-shift-hdr">Where the shift happens</div>
+                      <template for:each={insightsSentimentJourney.bookends} for:item="b">
+                        <div key={b.key} class="mca-traj-book">
+                          <div class="mca-traj-book-top">
+                            <span class="mca-traj-book-lbl">{b.label}</span>
+                            <span class="mca-traj-book-cap">{b.caption}</span>
+                          </div>
+                          <div class="mca-traj-stack">
+                            <div class="mca-traj-seg" style={b.posStyle}></div>
+                            <div class="mca-traj-seg" style={b.neuStyle}></div>
+                            <div class="mca-traj-seg" style={b.negStyle}></div>
+                          </div>
+                        </div>
+                      </template>
+                      <div class="mca-traj-legend">
+                        <span class="mca-traj-key"><span class="mca-traj-dot" style="background:#16A34A;"></span>Positive</span>
+                        <span class="mca-traj-key"><span class="mca-traj-dot" style="background:#94A3B8;"></span>Neutral</span>
+                        <span class="mca-traj-key"><span class="mca-traj-dot" style="background:#DC2626;"></span>Negative</span>
+                      </div>
+                    </div>
+
+                    <div class="chart-caption"><span>Opening vs closing sentiment on {insightsSentimentJourney.total} calls</span></div>
+                  </template>
+                  <template if:false={hasInsightsSentimentJourney}>
+                    <p class="muted">No start/end sentiment recorded across these calls.</p>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coaching feed (real per-call improvement notes) -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">🎯 Coaching feed <span class="count">— real scope-of-improvement notes</span></div></div>
+              <div class="card-body">
+                <template if:true={hasInsightsCoaching}>
+                  <div class="mca-coach">
+                    <template for:each={insightsCoaching} for:item="g">
+                      <div key={g.key} class="mca-coach-group">
+                        <button class="mca-coach-head" style={g.headStyle} data-key={g.key} data-open={g.open} onclick={handleCoachToggle}>
+                          <span class="mca-coach-caret">{g.caret}</span>
+                          <span class="mca-coach-dot" style={g.dotStyle}></span>
+                          <span class="mca-coach-theme">{g.theme}</span>
+                          <span class="mca-coach-count">{g.countLabel}</span>
+                        </button>
+                        <div class={g.bodyClass}>
+                          <div class="mca-coach-agents">
+                            <template for:each={g.agents} for:item="a">
+                              <div key={a.key} class="mca-coach-agent">
+                                <div class="mca-coach-agent-hdr">
+                                  <span class="mca-coach-avatar">{a.initials}</span>
+                                  <span class="mca-coach-agent-name">{a.agent}</span>
+                                  <span class="mca-coach-agent-count">{a.countLabel}</span>
+                                </div>
+                                <div class="mca-coach-grid">
+                                  <template for:each={a.notes} for:item="n">
+                                    <div key={n.key} class="mca-coach-item">
+                                      <div class="mca-coach-text">{n.text}</div>
+                                      <div class="mca-coach-ctx">{n.context}</div>
+                                    </div>
+                                  </template>
+                                </div>
+                              </div>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template if:false={hasInsightsCoaching}>
+                  <p class="muted">No improvement notes recorded across these calls.</p>
+                </template>
+              </div>
+            </div>
+
+          </template>
+          </template>
+
+        </div>
+        </template>
+
+    </div>
+</template>

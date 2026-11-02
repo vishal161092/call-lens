@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>LS4</label>
+    <protected>false</protected>
+    <values>
+        <field>Question__c</field>
+        <value xsi:type="xsd:string">Did the customer identify a specific product, collection, or category of interest?</value>
+    </values>
+    <values>
+        <field>Question_Type__c</field>
+        <value xsi:type="xsd:string">Product Specificity</value>
+    </values>
+    <values>
+        <field>Weightage__c</field>
+        <value xsi:type="xsd:double">8</value>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,156 @@
+<template>
+
+    <lightning-card>
+        <div style="margin-top: -22px;">
+    <lightning-card title="Audio Recording" icon-name="utility:listen">
+        <div class="slds-var-m-around_medium">
+
+            <template if:true={recordId}>
+                <audio
+                    src={audioSrc}
+                    onplay={handleOnPlay}
+                    onseeked={handleOnSeeked}
+                    onseeking={handleOnSeeking}
+                    onpause={handleOnPause}
+                    ontimeupdate={handleOnTimeUpdate}
+                    preload="metadata"
+                >
+                </audio>
+
+                <div class="waveform-panel">
+                    <!-- Seekable waveform: gray base bars + blue played layer clipped to position -->
+                    <div class="waveform-track" onclick={handleSeek}>
+                        <div class="wf-bars wf-bars-base">
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                        </div>
+                        <div class={waveClass} style={waveformProgressStyle}>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                            <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+                        </div>
+                        <div class="wf-playhead" style={playheadStyle}></div>
+                    </div>
+
+                    <div class="player-controls">
+                        <span class="player-time">{currentTimeFormatted} / {totalTimeFormatted}</span>
+                        <div class="player-controls-center">
+                            <button class="skip-btn" onclick={handleSkipBack} title="Rewind 15s">
+                                <lightning-icon icon-name="utility:undo" size="xx-small"></lightning-icon>
+                            </button>
+                            <button class="play-btn" title={playPauseAltText} onclick={handlePlayPause}>
+                                <lightning-icon icon-name={playPauseIcon} size="small" variant="inverse"></lightning-icon>
+                            </button>
+                            <button class="skip-btn" onclick={handleSkipForward} title="Forward 15s">
+                                <lightning-icon icon-name="utility:redo" size="xx-small"></lightning-icon>
+                            </button>
+                        </div>
+                        <div class="player-controls-right">
+                            <button class="speed-btn" onclick={handleSpeedChange} title="Playback speed">{playbackSpeedLabel}</button>
+                            <div class="volume-wrap">
+                                <lightning-icon icon-name="utility:volume_high" size="xx-small"></lightning-icon>
+                                <input type="range" class="volume-slider" min="0" max="100" value={volumeLevel} onchange={handleVolumeChange}/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- <template if:true={loadingTopics}>
+            <div style="padding: 20px 6px; text-align:center;">
+                <template for:each={keywords} for:item="keywordObj">
+                    <span key={keywordObj.keyword} class="slds-pill slds-pill_link" data-keyword={keywordObj.keyword} onclick={handlePillClick}>
+                        <a class="slds-pill__action custom_pill_style">
+                            <span class="slds-pill__label">{keywordObj.keyword}</span>
+                        </a>
+                    </span>
+                </template>
+            </div>
+            </template>
+            <template if:false={loadingTopics}>
+                <div style="padding-top: 20px;text-align:center">
+                    Loading Topics <img src={einsteinLoadin} class="img-container"/>
+                </div>
+            </template> -->
+
+            </template>
+        </div>
+    </lightning-card>
+        </div>
+    <!-- <template if:false={summaryTrans}>
+        <div style="text-align:center;">
+            <lightning-button icon-name="utility:sparkles" variant="brand-outline" label="Summarize Conversation with Transcription" onclick={buttonHandler} class="slds-m-left_x-small"></lightning-button>
+        </div>
+    </template>
+
+    <template if:true={einsteinLoading}>
+        <div class="slds-grid slds-wrap img-container" style="height: 220px;padding-top: 56px;">
+
+        <div class="slds-size_1-of-2 img-align custom-width" style="text-align:right;">
+            <img src={einsteinMainGif} class="loading-Einstein-Img"/>
+        </div>
+
+        <div class="slds-size_1-of-2 custom-section-font">
+
+                <div class="loading-text-top-padding">
+                    <template if:true={load1_1} class="">
+                        <img src={einsteinLoadin} class="img-container"/> <span class="progress-font-color custom-text-weight"> Analyzing your request </span>
+                    </template>
+                    <template if:true={load1_2}>
+                        <div class="loading-text-weight"> <lightning-icon class="icon-complete-color" icon-name="utility:success" size="small"></lightning-icon> Analyzing your request </div>
+                    </template>
+                </div>
+                <div class="loading-text-padding">
+                    <template if:true={load2_1}>
+                        <img src={einsteinLoadin} class="img-container"/> <span class="progress-font-color custom-text-weight"> Figuring out next steps </span>
+                    </template>
+                    <template if:true={load2_2}>
+                        <div class="loading-text-weight"> <lightning-icon class="icon-complete-color" icon-name="utility:success" size="small"></lightning-icon> Figuring out next steps </div>
+                    </template>
+                </div>
+                <div class="loading-text-padding">
+                    <template if:true={load3_1}>
+                        <img src={einsteinLoadin} class="img-container"/> <span class="progress-font-color custom-text-weight"> Working </span>
+                    </template>
+                    <template if:true={load3_2}>
+                        <div class="loading-text-weight"> <lightning-icon class="icon-complete-color" icon-name="utility:success" size="small"></lightning-icon> Working </div>
+                    </template>
+                </div>
+                <div class="loading-text-padding">       
+                    <template if:true={load4_1}>
+                        <img src={einsteinLoadin} class="img-container"/> <span class="progress-font-color custom-text-weight"> Finishing up </span>
+                    </template>
+                    <template if:true={load4_2}>
+                        <div class="loading-text-weight"> <lightning-icon class="icon-complete-color" icon-name="utility:success" size="small"></lightning-icon> Finishing up </div>
+                    </template>
+                </div>
+        </div>
+        </div>
+    </template> -->
+
+    <template if:true={summaryTrans}>
+
+    <!-- <lightning-card title="Call Transcription" icon-name="utility:sparkles">
+        
+        <div style="padding:10px 26px 0px 26px; line-height: 24px;">
+             <lightning-formatted-rich-text value={summary}></lightning-formatted-rich-text>
+        </div>
+    </lightning-card> -->
+    
+    <!-- <div style="padding-top: 26px;">
+        <c-de_audio_transcription rec-id={recordId}></c-de_audio_transcription>
+    </div> -->
+    </template>
+
+    </lightning-card>
+</template>

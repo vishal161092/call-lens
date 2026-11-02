@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>File_URL__c</fullName>
+    <externalId>false</externalId>
+    <formula>&quot;/sfc/servlet.shepherd/document/download/&quot;&amp;File_Id__c&amp;&quot;?operationContext=S1&quot;</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>File URL</label>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

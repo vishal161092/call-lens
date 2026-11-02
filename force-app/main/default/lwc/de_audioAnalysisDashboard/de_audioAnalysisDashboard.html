@@ -1,0 +1,242 @@
+<template>
+    <lightning-card>
+        <!-- Dark Hero banner (full width, no card padding) -->
+        <div class="vb">
+            <!-- Left: identity -->
+            <div class="vb-left">
+                <div class="vb-ico">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 01.17 2 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.08 6.08l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                </div>
+                <div class="vb-title">Customer Service Quality Evaluation</div>
+                <div class="vb-sub">Comprehensive analysis of agent performance and customer interaction</div>
+                <template if:true={hasAgent}>
+                    <div class="vb-chips">
+                        <div class="vb-chip">
+                            <lightning-icon icon-name="utility:agent_session" size="xx-small" class="vb-chip-ico"></lightning-icon>
+                            <span>{agentName}</span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Center: score breakdown -->
+            <div class="vb-mid">
+                <div class="vb-mid-title">Score Breakdown</div>
+                <template if:true={hasQualityScores}>
+                    <template for:each={qualityScoresArray} for:item="scoreItem">
+                        <div key={scoreItem.key} class="vb-met">
+                            <span class="vb-met-lbl">{scoreItem.label}</span>
+                            <div class="vb-met-track">
+                                <div class="vb-met-fill" style={scoreItem.barFillStyle}></div>
+                            </div>
+                            <span class="vb-met-val">{scoreItem.score}</span>
+                        </div>
+                    </template>
+                </template>
+            </div>
+
+            <!-- Right: score ring -->
+            <div class="vb-right">
+                <div class="vb-score-lbl">Overall Score</div>
+                <div class="ring-box">
+                    <svg class="ring-svg" width="90" height="90" viewBox="0 0 90 90">
+                        <circle class="ring-track" cx="45" cy="45" r="42"></circle>
+                        <circle class="ring-fill" cx="45" cy="45" r="42" style={ringFillStyle}></circle>
+                    </svg>
+                    <div class="ring-center">
+                        <span class="vb-score-num">{overallScore}</span>
+                        <span class="vb-score-denom">/ 5</span>
+                    </div>
+                </div>
+                <div class={statusClass}>{statusLabel}</div>
+            </div>
+        </div>
+
+        <div class="slds-p-around_medium">
+            <!-- Tabs -->
+            <div class="slds-tabs_default">
+                <ul class="slds-tabs_default__nav" role="tablist">
+                    <li class={overviewTabClass} role="presentation">
+                        <a class="slds-tabs_default__link" href="#" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-default-1" id="tab-default-1__item" onclick={handleTabClick} data-tab="overview">
+                            Overview
+                        </a>
+                    </li>
+                    <li class={insightsTabClass} role="presentation">
+                        <a class="slds-tabs_default__link" href="#" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item" onclick={handleTabClick} data-tab="insights">
+                            Insights
+                        </a>
+                    </li>
+                    <li class={kpisTabClass} role="presentation">
+                        <a class="slds-tabs_default__link" href="#" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-default-3" id="tab-default-3__item" onclick={handleTabClick} data-tab="kpis">
+                            KPIs
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Overview Tab Content -->
+                <div id="tab-default-1" class={overviewContentClass} role="tabpanel" aria-labelledby="tab-default-1__item">
+                    <div class="slds-grid slds-gutters slds-m-top_medium">
+                        <!-- Quality Scores Chart -->
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-card slds-p-around_medium">
+                                <h2 class="slds-text-heading_medium slds-m-bottom_medium">
+                                    <lightning-icon icon-name="standard:chart" size="small" class="slds-m-right_x-small"></lightning-icon>
+                                    Quality Scores
+                                </h2>
+                                <div class="chart-container">
+                                    <canvas lwc:dom="manual" class="quality-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Score Breakdown -->
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="slds-card slds-p-around_medium">
+                                <h2 class="slds-text-heading_medium slds-m-bottom_medium">Score Breakdown</h2>
+                                <template if:true={hasQualityScores}>
+                                    <template for:each={qualityScoresArray} for:item="scoreItem">
+                                        <div key={scoreItem.key} class={scoreItem.itemClass}>
+                                            <div class="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
+                                                <span class="slds-text-heading_small">{scoreItem.label}</span>
+                                                <span class={scoreItem.scoreClass}>{scoreItem.score}/5</span>
+                                            </div>
+                                            <p class="slds-text-body_small slds-text-color_weak">{scoreItem.justification}</p>
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insights Tab Content -->
+                <div id="tab-default-2" class={insightsContentClass} role="tabpanel" aria-labelledby="tab-default-2__item">
+                    <div class="slds-m-top_medium">
+                        <!-- Customer Intent & Sentiment -->
+                        <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                            <div class="slds-col">
+                                <div class="slds-card slds-p-around_medium">
+                                    <h2 class="slds-text-heading_medium slds-m-bottom_medium">
+                                        <lightning-icon icon-name="standard:user" size="small" class="slds-m-right_x-small"></lightning-icon>
+                                        Customer Intent
+                                    </h2>
+                                    <p class="slds-text-body_regular">{customerIntent}</p>
+                                </div>
+                            </div>
+                            <div class="slds-col">
+                                <div class="slds-card slds-p-around_medium">
+                                    <h2 class="slds-text-heading_medium slds-m-bottom_medium">
+                                        <lightning-icon icon-name="standard:feedback" size="small" class="slds-m-right_x-small"></lightning-icon>
+                                        Sentiment Analysis
+                                    </h2>
+                                    <div class="slds-grid slds-grid_align-center slds-grid_vertical-align-center">
+                                        <div class="slds-p-around_small slds-border_right">
+                                            <span class="slds-text-heading_large">{sentiment}</span>
+                                        </div>
+                                        <p class="slds-text-body_small slds-text-color_weak slds-p-left_medium">{interactionSummary}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scope of Improvement -->
+                        <div class="slds-card slds-p-around_medium">
+                            <h2 class="slds-text-heading_medium slds-m-bottom_medium">
+                                <lightning-icon icon-name="standard:trending" size="small" class="slds-m-right_x-small"></lightning-icon>
+                                Areas for Improvement
+                            </h2>
+                            <template if:true={hasImprovements}>
+                                <template for:each={improvementsArray} for:item="improvement" for:index="index">
+                                    <div key={improvement.key} class="slds-m-bottom_small improvement-item">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-size_1-of-12">
+                                                <div class="improvement-number">{improvement.index}</div>
+                                            </div>
+                                            <div class="slds-col slds-size_11-of-12">
+                                                <p class="slds-text-body_regular">{improvement.text}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPIs Tab Content -->
+                <div id="tab-default-3" class={kpisContentClass} role="tabpanel" aria-labelledby="tab-default-3__item">
+                    <div class="slds-m-top_medium">
+                        <!-- KPI Summary -->
+                        <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                            <div class="slds-col">
+                                <div class="kpi-summary-card kpi-summary-success">
+                                    <lightning-icon icon-name="utility:success" size="small" class="slds-icon-text-success slds-m-bottom_small"></lightning-icon>
+                                    <div class="kpi-summary-value">{kpiStats.yes}</div>
+                                    <div class="kpi-summary-label">Achieved</div>
+                                </div>
+                            </div>
+                            <div class="slds-col">
+                                <div class="kpi-summary-card kpi-summary-warning">
+                                    <lightning-icon icon-name="utility:warning" size="small" class="slds-icon-text-warning slds-m-bottom_small"></lightning-icon>
+                                    <div class="kpi-summary-value">{kpiStats.partial}</div>
+                                    <div class="kpi-summary-label">Partially Met</div>
+                                </div>
+                            </div>
+                            <div class="slds-col">
+                                <div class="kpi-summary-card kpi-summary-error">
+                                    <lightning-icon icon-name="utility:error" size="small" class="slds-icon-text-error slds-m-bottom_small"></lightning-icon>
+                                    <div class="kpi-summary-value">{kpiStats.no}</div>
+                                    <div class="kpi-summary-label">Not Met</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Details -->
+                        <div class="slds-card slds-p-around_medium">
+                            <h2 class="slds-text-heading_medium slds-m-bottom_medium">
+                                <lightning-icon icon-name="standard:metrics" size="small" class="slds-m-right_x-small"></lightning-icon>
+                                KPI Evaluations
+                            </h2>
+                            <template if:true={hasKpiEvaluations}>
+                                <template for:each={kpiEvaluationsArray} for:item="kpi">
+                                    <div key={kpi.key} class="slds-m-bottom_medium kpi-item">
+                                        <div class="slds-grid slds-grid_align-start">
+                                            <div class="slds-col slds-size_1-of-12">
+                                                <lightning-icon icon-name={kpi.iconName} size="small" class={kpi.iconClass}></lightning-icon>
+                                            </div>
+                                            <div class="slds-col slds-size_11-of-12">
+                                                <div class="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
+                                                    <h3 class="slds-text-heading_small">{kpi.kpiQuestion}</h3>
+                                                    <span class={kpi.badgeClass}>{kpi.answer}</span>
+                                                </div>
+                                                <div class="slds-m-left_medium">
+                                                    <div class="slds-m-bottom_x-small">
+                                                        <span class="slds-text-title_caps slds-text-color_weak">Justification:</span>
+                                                        <p class="slds-text-body_small slds-m-top_xx-small">{kpi.justification}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span class="slds-text-title_caps slds-text-color_weak">Evidence:</span>
+                                                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small slds-text-style_italic">{kpi.evidence}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </lightning-card>
+
+    <!-- Error Toast -->
+    <template if:true={error}>
+        <div class="slds-m-around_medium">
+            <lightning-card title="Error">
+                <div class="slds-text-color_error">{error}</div>
+            </lightning-card>
+        </div>
+    </template>
+</template>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>14</label>
+    <protected>false</protected>
+    <values>
+        <field>Conversation_Parameters__c</field>
+        <value xsi:type="xsd:string">(This piece has a stunning contemporary look ...)</value>
+    </values>
+    <values>
+        <field>KPI_Question__c</field>
+        <value xsi:type="xsd:string">Painting a visual picture of the product</value>
+    </values>
+    <values>
+        <field>Lead_Type__c</field>
+        <value xsi:type="xsd:string">Website Wishlist Journey</value>
+    </values>
+</CustomMetadata>

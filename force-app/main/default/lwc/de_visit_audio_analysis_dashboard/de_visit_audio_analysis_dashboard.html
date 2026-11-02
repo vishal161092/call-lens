@@ -1,0 +1,293 @@
+<template>
+    <template if:true={error}>
+        <div class="error-container">
+            <lightning-icon icon-name="utility:error" size="small" class="slds-m-right_x-small"></lightning-icon>
+            <span>{error}</span>
+        </div>
+    </template>
+
+    <template if:true={hasData}>
+        <div class="dashboard-container">
+            <!-- HEADER -->
+            <div class="header">
+                <div>
+                    <div class="header-title">Sales Intelligence Report</div>
+                    <div class="header-sub">Field Visit Analysis · DSR Performance · Trade Signals</div>
+                </div>
+                <div class="header-badges">
+                    <template for:each={headerBadges} for:item="badge">
+                        <span key={badge.label} class={badge.badgeClass}>{badge.label}</span>
+                    </template>
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs-bar">
+                <button class={summaryTabClass} data-tab="summary" onclick={handleTabClick}>
+                    <span class="tab-icon">📋</span>Summary
+                </button>
+                <button class={salesTabClass} data-tab="sales" onclick={handleTabClick}>
+                    <span class="tab-icon">📈</span>Sales Execution
+                </button>
+                <button class={tradeTabClass} data-tab="trade" onclick={handleTabClick}>
+                    <span class="tab-icon">🏷️</span>Trade Scheme
+                </button>
+                <button class={supplyTabClass} data-tab="supply" onclick={handleTabClick}>
+                    <span class="tab-icon">🚚</span>Supply Chain
+                </button>
+                <button class={dsrTabClass} data-tab="dsr" onclick={handleTabClick}>
+                    <span class="tab-icon">👤</span>DSR Performance
+                </button>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content-area">
+                <!-- TAB: SUMMARY -->
+                <div class={summaryPanelClass}>
+                    <div class="kpi-row">
+                        <template for:each={kpis} for:item="kpi">
+                            <div key={kpi.label} class="kpi-card">
+                                <div class="kpi-val" style={kpi.colorStyle}>{kpi.value}</div>
+                                <div class="kpi-label">{kpi.label}</div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Order Summary -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Order Summary</span>
+                            </div>
+                            <table class="order-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th style="text-align:right">Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={orderSummary} for:item="row">
+                                        <tr key={row.product}>
+                                            <td>{row.product}</td>
+                                            <td style="text-align:right">
+                                                <span class="qty-num">{row.quantity}</span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Retailer Feedback -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Retailer Feedback</span>
+                            </div>
+                            <template for:each={retailerFeedback} for:item="fb">
+                                <div key={fb.key} class="feedback-item">
+                                    <div class={fb.dotClass}></div>
+                                    <span>{fb.text}</span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Competitive Signal -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Competitive Signal</span>
+                                <template if:true={competitiveSignal.severity}>
+                                    <span class={competitiveSeverityClass}>{competitiveSignal.severity}</span>
+                                </template>
+                            </div>
+                            <template if:true={competitiveSignal.discountMentioned}>
+                                <div class="info-row">
+                                    <span class="info-key">Discount Mentioned</span>
+                                    <span class="badge badge-red">{competitiveSignal.discountMentioned}</span>
+                                </div>
+                            </template>
+                            <template if:true={competitiveSignal.marginAdvantageCited}>
+                                <div class="info-row">
+                                    <span class="info-key">Margin Advantage Cited</span>
+                                    <span class="badge badge-red">{competitiveSignal.marginAdvantageCited}</span>
+                                </div>
+                            </template>
+                            <template if:true={competitiveSignal.details}>
+                                <div class="info-row">
+                                    <span class="info-key">Details</span>
+                                    <span class="info-val info-val-right">{competitiveSignal.details}</span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Commercial & Affinity -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Commercial &amp; Affinity</span>
+                            </div>
+                            <template if:true={commercialAffinity.creditRequested}>
+                                <div class="info-row">
+                                    <span class="info-key">Credit Requested</span>
+                                    <span class="badge badge-amber">{commercialAffinity.creditRequested}</span>
+                                </div>
+                            </template>
+                            <template if:true={commercialAffinity.creditDays}>
+                                <div class="info-row">
+                                    <span class="info-key">Credit Days</span>
+                                    <span class="info-val">{commercialAffinity.creditDays}</span>
+                                </div>
+                            </template>
+                            <template if:true={commercialAffinity.affinityScore}>
+                                <div class="info-row">
+                                    <span class="info-key">Affinity Score</span>
+                                    <span class="badge badge-blue">{commercialAffinity.affinityScore}</span>
+                                </div>
+                            </template>
+                            <template if:true={commercialAffinity.switchRisk}>
+                                <div class="info-row">
+                                    <span class="info-key">Switch Risk</span>
+                                    <span class="info-val">{commercialAffinity.switchRisk}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: SALES EXECUTION -->
+                <div class={salesPanelClass}>
+                    <div class="grid-3">
+                        <template for:each={salesExecutionCards} for:item="card">
+                            <div key={card.title} class="card">
+                                <div class="card-header">
+                                    <span class="card-title">{card.title}</span>
+                                    <template if:true={card.signalLabel}>
+                                        <span class={card.signalPillClass}>{card.signalLabel}</span>
+                                    </template>
+                                </div>
+                                <div class="card-body">
+                                    <lightning-formatted-rich-text value={card.body}></lightning-formatted-rich-text>
+                                </div>
+                                <template if:true={card.actionLabel}>
+                                    <div class={card.actionBoxClass}>
+                                        <div class="action-label">{card.actionLabel}</div>
+                                        {card.actionText}
+                                    </div>
+                                </template>
+                                <template if:true={card.evidence}>
+                                    <div class="evidence">{card.evidence}</div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- TAB: TRADE SCHEME -->
+                <div class={tradePanelClass}>
+                    <div class="grid-2">
+                        <template for:each={tradeSchemeCards} for:item="card">
+                            <div key={card.title} class="card">
+                                <div class="card-header">
+                                    <span class="card-title">{card.title}</span>
+                                    <template if:true={card.severity}>
+                                        <span class={card.severityClass}>{card.severity}</span>
+                                    </template>
+                                </div>
+                                <div class="card-body">
+                                    <lightning-formatted-rich-text value={card.body}></lightning-formatted-rich-text>
+                                </div>
+                                <template if:true={card.actionLabel}>
+                                    <div class={card.actionBoxClass}>
+                                        <div class="action-label">{card.actionLabel}</div>
+                                        {card.actionText}
+                                    </div>
+                                </template>
+                                <template if:true={card.evidence}>
+                                    <div class="evidence">{card.evidence}</div>
+                                </template>
+                                <template if:true={card.infoRows}>
+                                    <template for:each={card.infoRows} for:item="row">
+                                        <div key={row.rowId} class="info-row">
+                                            <span class="info-key">{row.key}</span>
+                                            <span class={row.valueClass}>{row.value}</span>
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- TAB: SUPPLY CHAIN -->
+                <div class={supplyPanelClass}>
+                    <div class="grid-2">
+                        <template for:each={supplyChainCards} for:item="card">
+                            <div key={card.title} class="card">
+                                <div class="card-header">
+                                    <span class="card-title">{card.title}</span>
+                                    <template if:true={card.signalLabel}>
+                                        <span class={card.signalPillClass}>{card.signalLabel}</span>
+                                    </template>
+                                </div>
+                                <div class="card-body">
+                                    <lightning-formatted-rich-text value={card.body}></lightning-formatted-rich-text>
+                                </div>
+                                <template if:true={card.actionLabel}>
+                                    <div class={card.actionBoxClass}>
+                                        <div class="action-label">{card.actionLabel}</div>
+                                        {card.actionText}
+                                    </div>
+                                </template>
+                                <template if:true={card.evidence}>
+                                    <div class="evidence">{card.evidence}</div>
+                                </template>
+                                <template if:true={card.infoRows}>
+                                    <template for:each={card.infoRows} for:item="row">
+                                        <div key={row.rowId} class="info-row">
+                                            <span class="info-key">{row.key}</span>
+                                            <span class={row.valueClass}>{row.value}</span>
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- TAB: DSR PERFORMANCE -->
+                <div class={dsrPanelClass}>
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Positive Behaviors</span>
+                            </div>
+                            <template for:each={positiveBehaviors} for:item="item">
+                                <div key={item.key} class="behavior-item positive">
+                                    <span class="behavior-icon">✓</span>
+                                    <span>{item.text}</span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Coaching Opportunities</span>
+                            </div>
+                            <template for:each={coachingOpportunities} for:item="item">
+                                <div key={item.key} class="behavior-item coaching">
+                                    <span class="behavior-icon">!</span>
+                                    <span>{item.text}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <template if:true={nextVisitRecommendation}>
+                        <div class="next-visit">
+                            <div class="next-visit-label">📅 Next Visit Recommendation</div>
+                            {nextVisitRecommendation}
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

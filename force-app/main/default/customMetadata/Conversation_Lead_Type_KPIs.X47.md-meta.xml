@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>47</label>
+    <protected>false</protected>
+    <values>
+        <field>Conversation_Parameters__c</field>
+        <value xsi:type="xsd:string">Product &amp; Process group. Metric: resolutionQuality. Audio-observable.</value>
+    </values>
+    <values>
+        <field>KPI_Question__c</field>
+        <value xsi:type="xsd:string">Provided complete and correct resolution/information (comprehension displayed)</value>
+    </values>
+    <values>
+        <field>Lead_Type__c</field>
+        <value xsi:type="xsd:string">Common</value>
+    </values>
+    <values>
+        <field>Weightage__c</field>
+        <value xsi:type="xsd:double">8</value>
+    </values>
+</CustomMetadata>

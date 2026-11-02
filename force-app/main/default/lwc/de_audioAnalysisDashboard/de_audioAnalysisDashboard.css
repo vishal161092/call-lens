@@ -1,0 +1,288 @@
+.chart-container {
+    width: 100%;
+    height: 400px;
+    position: relative;
+    /* padding: 10px; */
+}
+
+.quality-chart {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.score-item {
+    border-left: 4px solid #d3d3d3;
+    padding-left: 1rem;
+}
+
+.score-item-success {
+    border-left-color: #10b981;
+}
+
+.score-item-warning {
+    border-left-color: #f59e0b;
+}
+
+.score-item-error {
+    border-left-color: #ef4444;
+}
+
+.improvement-item {
+    background-color: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.improvement-number {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #fbbf24;
+    color: #92400e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.75rem;
+}
+
+/* ===== Dark Hero banner (Variant B) ===== */
+.vb {
+    display: grid;
+    grid-template-columns: 1.1fr 1.4fr auto;
+    gap: 28px;
+    align-items: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #263449 100%);
+    border-radius: 16px;
+    padding: 22px 26px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
+}
+
+/* Left */
+.vb-left {
+    min-width: 0;
+}
+.vb-ico {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(245, 158, 11, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+.vb-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.25;
+    margin-bottom: 6px;
+}
+.vb-sub {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+.vb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+.vb-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+.vb-chip-ico {
+    --slds-c-icon-color-foreground-default: #f59e0b;
+}
+
+/* Center: score breakdown */
+.vb-mid {
+    min-width: 0;
+}
+.vb-mid-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+.vb-met {
+    display: grid;
+    grid-template-columns: 120px 1fr 34px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 9px;
+}
+.vb-met-lbl {
+    font-size: 12px;
+    color: #cbd5e1;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vb-met-track {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.vb-met-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s ease;
+}
+.vb-met-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Right: score ring */
+.vb-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.vb-score-lbl {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+.ring-box {
+    position: relative;
+    width: 90px;
+    height: 90px;
+}
+.ring-svg {
+    transform: rotate(-90deg);
+}
+.ring-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 6;
+}
+.ring-fill {
+    fill: none;
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease;
+}
+.ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.vb-score-num {
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+}
+.vb-score-denom {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+.vb-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 999px;
+}
+.vb-status-high { background: rgba(52, 211, 153, 0.18); color: #34d399; }
+.vb-status-mid  { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+.vb-status-low  { background: rgba(248, 113, 113, 0.18); color: #f87171; }
+
+@media (max-width: 640px) {
+    .vb {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+/* ===== KPI summary tiles ===== */
+.kpi-summary-card {
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    border-top: 3px solid #cbd5e1;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+.kpi-summary-value {
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+}
+.kpi-summary-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 6px;
+}
+.kpi-summary-success { border-top-color: #16a34a; }
+.kpi-summary-success .kpi-summary-value { color: #16a34a; }
+.kpi-summary-warning { border-top-color: #d97706; }
+.kpi-summary-warning .kpi-summary-value { color: #d97706; }
+.kpi-summary-error { border-top-color: #dc2626; }
+.kpi-summary-error .kpi-summary-value { color: #dc2626; }
+
+.kpi-item {
+    border: 1px solid #e5e5e5;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    transition: box-shadow 0.2s;
+}
+
+.kpi-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.slds-card {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Animation for fade-in effect */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slds-tabs_default__content.slds-show {
+    animation: fadeIn 0.5s ease-in;
+}

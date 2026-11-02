@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Lead_Type__c</fullName>
+    <label>Lead Type</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Wedding Customer Journey</fullName>
+                <default>false</default>
+                <label>Wedding Customer Journey</label>
+            </value>
+            <value>
+                <fullName>Find in Store Journey</fullName>
+                <default>false</default>
+                <label>Find in Store Journey</label>
+            </value>
+            <value>
+                <fullName>Website Wishlist Journey</fullName>
+                <default>false</default>
+                <label>Website Wishlist Journey</label>
+            </value>
+            <value>
+                <fullName>Cart Adders Journey</fullName>
+                <default>false</default>
+                <label>Cart Adders Journey</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,120 @@
+<template>
+    <template if:true={error}>
+        <div class="error-container">
+            <lightning-icon icon-name="utility:error" size="small" class="slds-m-right_x-small"></lightning-icon>
+            <span>{error}</span>
+        </div>
+    </template>
+
+    <template if:true={isLoading}>
+        <div class="loading-container">
+            <div class="loading-card">
+                <div class="loading-header">
+                    <div class="pulse-dot"></div>
+                    <div class="loading-title">Analyzing Lead Score from Voice Call</div>
+                </div>
+                <div class="loading-subtitle">
+                    Evaluating need depth, capability, alignment, engagement, and velocity
+                </div>
+                <div class="loading-steps">
+                    <div class="loading-step">
+                        <span class="step-label">Transcription Processing</span>
+                        <div class="step-bar"><div class="step-fill step-fill-1"></div></div>
+                    </div>
+                    <div class="loading-step">
+                        <span class="step-label">Metric Evaluation</span>
+                        <div class="step-bar"><div class="step-fill step-fill-2"></div></div>
+                    </div>
+                    <div class="loading-step">
+                        <span class="step-label">Final Lead Classification</span>
+                        <div class="step-bar"><div class="step-fill step-fill-3"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template if:true={hasData}>
+        <div class="dashboard-wrapper">
+            <div class="hero-card">
+                <div class={totalScoreCircleClass}>
+                    <span>{totalScore}</span>
+                </div>
+                <div class="hero-main">
+                    <h1>Conversion Score</h1>
+                    <div class="hero-tags">
+                        <span class={categoryBadgeClass}>{leadCategory} Lead</span>
+                        <span class="range-label">Score range: {scoreRange}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-tile">
+                <div class="positives-card">
+                    <div class="positives-header">
+                        <h2>Top Positives</h2>
+                        <span class="positive-count">{positiveCount}</span>
+                    </div>
+                    <template if:true={topPositives.length}>
+                        <template for:each={topPositives} for:item="p">
+                            <span key={p.key} class={p.pillClass}>{p.text}</span>
+                        </template>
+                    </template>
+                    <template if:false={topPositives.length}>
+                        <div class="positive-item">No high-scoring positives detected.</div>
+                    </template>
+                </div>
+
+                <div class="assessment-card summary-assessment">
+                    <div class="assessment-label">Overall Assessment</div>
+                    <div class="assessment-text">{overallAssessment}</div>
+                </div>
+            </div>
+
+            <div class="metrics-panel">
+                <template for:each={metricEvaluations} for:item="metric">
+                    <div key={metric.key} class="metric-row">
+                        <div class={metric.headerClass}>
+                            <div class="metric-title-wrap">
+                                <span class="metric-icon-chip">{metric.icon}</span>
+                                <h3>{metric.questionText}</h3>
+                            </div>
+                            <div class="score-wrap">
+                                <div class="score-line">
+                                    <span class="score-number" style={metric.scoreStyle}>{metric.score}</span>
+                                    <span class="score-max">/ 5</span>
+                                </div>
+                                <div class="score-meta">
+                                    <template if:true={metric.weightLabel}>
+                                        <span class="weight-chip">{metric.weightLabel}</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="progress-track">
+                            <div class="progress-fill" style={metric.progressStyle}></div>
+                        </div>
+
+                        <button class="toggle-btn" data-key={metric.key} onclick={handleToggleMetric}>
+                            <span>{metric.toggleLabel}</span>
+                            <span>{metric.toggleIcon}</span>
+                        </button>
+
+                        <div class={metric.detailsClass}>
+                            <div class={metric.justificationClass}>
+                                <div class="box-label">Justification</div>
+                                <div class="box-text">{metric.justification}</div>
+                            </div>
+
+                            <div class="evidence-box">
+                                <div class="box-label">Evidence</div>
+                                <div class="box-text">"{metric.evidence}"</div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+</template>

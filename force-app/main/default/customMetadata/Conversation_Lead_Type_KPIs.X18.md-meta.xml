@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>18</label>
+    <protected>false</protected>
+    <values>
+        <field>Conversation_Parameters__c</field>
+        <value xsi:type="xsd:string">Verify the exact requested product / SKU stock status at the customer&#x27;s preferred store with certainty (weightage ref: Product &amp; Process 8)</value>
+    </values>
+    <values>
+        <field>KPI_Question__c</field>
+        <value xsi:type="xsd:string">Confirming product availability with accuracy</value>
+    </values>
+    <values>
+        <field>Lead_Type__c</field>
+        <value xsi:type="xsd:string">FIS</value>
+    </values>
+    <values>
+        <field>Weightage__c</field>
+        <value xsi:type="xsd:double">8</value>
+    </values>
+</CustomMetadata>

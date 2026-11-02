@@ -1,0 +1,128 @@
+{
+  "headerBadges": [
+    { "label": "High Competitive Pressure", "type": "red" },
+    { "label": "Moderate Loyalty Risk", "type": "amber" },
+    { "label": "Credit: 7 Days", "type": "green" },
+    { "label": "Affinity: Stable", "type": "blue" }
+  ],
+  "kpis": [
+    { "value": "3", "label": "Products Ordered", "color": "blue" },
+    { "value": "₹20", "label": "Competitor Discount", "color": "red" },
+    { "value": "7", "label": "Credit Days", "color": "green" },
+    { "value": "30", "label": "Ember 100g Units", "color": "amber" }
+  ],
+  "orderSummary": [
+    { "product": "Ember Strong 100g", "quantity": "30" },
+    { "product": "Ember Strong 2 kg", "quantity": "2" },
+    { "product": "Aurelia Salt", "quantity": "20 ctn" }
+  ],
+  "retailerFeedback": [
+    "Aurelia Tea Gold 1 kg is moving slow.",
+    "Crimson Label is being asked more by customers.",
+    "In this area, strong tea has demand.",
+    { "text": "Ember 100g & 250g small packs move fastest.", "highlight": true }
+  ],
+  "competitiveSignal": {
+    "severity": "High",
+    "discountMentioned": "Yes",
+    "marginAdvantageCited": "Yes",
+    "details": "Opposite shop: ₹20 off Crimson Label"
+  },
+  "commercialAffinity": {
+    "creditRequested": "Yes",
+    "creditDays": "7 days",
+    "affinityScore": "Stable",
+    "switchRisk": "Price-Driven"
+  },
+  "salesExecution": [
+    {
+      "title": "SKU Velocity",
+      "signalType": "yes",
+      "signalLabel": "Signal Detected",
+      "body": "<strong>Aurelia Tea Gold 1 kg</strong> is slow-moving.<br><strong>Ember Strong 100g &amp; 250g</strong> are fast movers in this area.",
+      "actionLabel": "Recommended Action",
+      "actionText": "Prioritize small pack Ember replenishment. Review Gold 1 kg display &amp; offer alignment.",
+      "actionBorder": "red",
+      "evidence": "\"Aurelia Tea Gold one kilo is slow and 100g, 250g are fast.\" — Retailer"
+    },
+    {
+      "title": "Pack Size Elasticity",
+      "signalType": "yes",
+      "signalLabel": "Signal Detected",
+      "body": "Demand ceiling: <strong>30 units</strong> for Ember Strong 100g.<br><br>Recommended next cycle: <strong>24–30 units</strong> for 100g. Evaluate 250g on sell-out data.",
+      "actionLabel": "Justification",
+      "actionText": "DSR proposed 36 units (\"chhatti\"). Retailer resisted and settled at 30.",
+      "actionBorder": "blue"
+    },
+    {
+      "title": "Upsell Opportunity",
+      "signalType": "yes",
+      "signalLabel": "Signal Detected",
+      "body": "DSR proposed <strong>Ember Strong + POP material</strong> for Aurelia Tea Gold with a <strong>10+1 scheme</strong>.",
+      "actionLabel": "Outcome",
+      "actionText": "Retailer accepted Ember strong small packs and 2 kg. Cluster opportunity: <strong>None</strong>.",
+      "actionBorder": "green",
+      "evidence": "DSR suggested Ember strong trial and POP material placement."
+    }
+  ],
+  "tradeScheme": [
+    {
+      "title": "Competitive Discount Pressure",
+      "severity": "High Severity",
+      "body": "Opposite shop running a <strong>₹20 offer on Crimson Label</strong>, which is actively pulling customer demand.",
+      "actionLabel": "Risk",
+      "actionText": "Price-led switching behavior if no counter-offer is made on next visit.",
+      "actionBorder": "red",
+      "evidence": "\"Opposite shop offered 20 rupees off on Crimson Label.\" — Retailer"
+    },
+    {
+      "title": "Margin Sensitivity Flag",
+      "severity": "Moderate Risk",
+      "body": "<strong>Margin-sensitive outlet.</strong> Retailer cited that competitor margin is higher and customer demand is shifting toward Crimson Label.",
+      "actionBorder": "red",
+      "infoRows": [
+        { "key": "Margin Sensitive Outlet", "value": "Yes", "valueClass": "badge badge-red" },
+        { "key": "Loyalty Risk Score", "value": "Moderate", "valueClass": "severity-tag sev-mod" },
+        { "key": "Discount Mentioned", "value": "Yes", "valueClass": "badge badge-amber" },
+        { "key": "Margin Advantage Cited", "value": "Yes", "valueClass": "badge badge-amber" }
+      ]
+    }
+  ],
+  "supplyChain": [
+    {
+      "title": "Category Movement Signal",
+      "signalType": "yes",
+      "signalLabel": "Slow Movement",
+      "body": "<strong>Aurelia Tea Gold 1 kg</strong> is slow. Strong demand for <strong>small pack strong tea</strong> confirmed by retailer.",
+      "actionLabel": "Dispatch Recommendation",
+      "actionText": "Reduce Aurelia Tea Gold 1 kg focus. Allocate more to Ember Strong small packs.",
+      "actionBorder": "red",
+      "evidence": "Retailer reported Aurelia Tea Gold 1 kg slow movement and strong demand for small pack strong tea."
+    },
+    {
+      "title": "Credit Behavior Pattern",
+      "signalType": "no",
+      "signalLabel": "No Pressure",
+      "body": "Retailer accepted <strong>7-day credit</strong> without citing any financial constraint — healthy pattern.",
+      "actionLabel": "Justification",
+      "actionText": "Retailer agreed to 7 days credit when offered UPI or credit — no resistance noted.",
+      "actionBorder": "green",
+      "infoRows": [
+        { "key": "Cash Flow Pressure Signal", "value": "No", "valueClass": "badge badge-green" },
+        { "key": "Risk Segmentation Flag", "value": "No", "valueClass": "badge badge-green" },
+        { "key": "Credit Days Agreed", "value": "7 days", "valueClass": "info-val" }
+      ]
+    }
+  ],
+  "positiveBehaviors": [
+    "Attempted upsell with Ember Strong.",
+    "Suggested POP material placement in store.",
+    "Pushed 10+1 scheme on Aurelia Tea Gold.",
+    "Negotiated quantity from 24 → 30 for 100g pack."
+  ],
+  "coachingOpportunities": [
+    "Quantify and counter competitor ₹20 offer with a clear, structured value pitch.",
+    "Address margin gap explicitly using retailer-focused economics — not just product push."
+  ],
+  "nextVisitRecommendation": "DSR should review sell-out of Ember Strong 100g and 250g, present a concrete scheme comparison versus the ₹20 Crimson Label offer, and reassess Aurelia Tea Gold 1 kg placement with POP execution evidence."
+}

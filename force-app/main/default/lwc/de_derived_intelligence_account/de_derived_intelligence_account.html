@@ -1,0 +1,146 @@
+<template>
+    <template if:true={error}>
+        <div class="error-container">
+            <lightning-icon icon-name="utility:error" size="small" class="slds-m-right_x-small"></lightning-icon>
+            <span>{error}</span>
+        </div>
+    </template>
+
+    <template if:true={isLoading}>
+        <div class="loading-container">
+            <div class="loading-progress">
+                <lightning-progress-bar value={loadingProgress} size="medium" variant="circular"></lightning-progress-bar>
+            </div>
+            <p class="loading-text">Generating Account 360° Intelligence...</p>
+        </div>
+    </template>
+
+    <template if:true={hasData}>
+        <div class="page-wrapper">
+            <!-- TOPBAR -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <div class="topbar-icon">◎</div>
+                    <div>
+                        <div class="topbar-title">Account 360° Intelligence</div>
+                        <div class="topbar-sub">{topbarSubtitle}</div>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <template for:each={topbarChips} for:item="chip">
+                        <span key={chip.key} class={chip.chipClass}>{chip.label}</span>
+                    </template>
+                </div>
+            </div>
+
+            <div class="page">
+                <!-- SECTION 1: DEMAND SHIFT SIGNALS -->
+                <div class="section-block">
+                    <div class="section-header">
+                        <div class="section-icon icon-indigo">📊</div>
+                        <span class="section-title">Demand Shift Signals</span>
+                        <span class="section-count">{demandShiftCount} signals tracked</span>
+                    </div>
+                    <div class="signal-grid">
+                        <template for:each={demandShiftSignals} for:item="signal">
+                            <div key={signal.key} class="signal-card">
+                                <div class="signal-top">
+                                    <span class="signal-label">{signal.label}</span>
+                                    <span class={signal.trendClass}>{signal.trendLabel}</span>
+                                </div>
+                                <div class={signal.evidenceClass}>
+                                    <div class={signal.evidenceDotClass}>{signal.evidenceCount}</div>
+                                    <span>{signal.evidenceText}</span>
+                                </div>
+                                <div class="signal-body">{signal.justification}</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: MARGIN & COMPETITIVE PRESSURE -->
+                <div class="section-block">
+                    <div class="section-header">
+                        <div class="section-icon icon-orange">⚡</div>
+                        <span class="section-title">Margin &amp; Competitive Pressure</span>
+                        <span class="section-count">{marginCompetitiveCount} signals tracked</span>
+                    </div>
+                    <div class="signal-grid">
+                        <template for:each={marginCompetitiveSignals} for:item="signal">
+                            <div key={signal.key} class="signal-card">
+                                <div class="signal-top">
+                                    <span class="signal-label">{signal.label}</span>
+                                    <span class={signal.trendClass}>{signal.trendLabel}</span>
+                                </div>
+                                <div class={signal.evidenceClass}>
+                                    <div class={signal.evidenceDotClass}>{signal.evidenceCount}</div>
+                                    <span>{signal.evidenceText}</span>
+                                </div>
+                                <div class="signal-body">{signal.justification}</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: CREDIT BEHAVIOR -->
+                <div class="section-block">
+                    <div class="section-header">
+                        <div class="section-icon icon-purple">💳</div>
+                        <span class="section-title">Credit Behavior Trend</span>
+                    </div>
+                    <div class="credit-card">
+                        <div class="credit-stat">
+                            <div class="credit-val" style={creditStat1Style}>{creditRequestFrequency}</div>
+                            <div class="credit-key">Credit Requests</div>
+                        </div>
+                        <div class="credit-divider"></div>
+                        <div class="credit-stat">
+                            <div class="credit-val" style={creditStat2Style}>{creditTrendArrow}</div>
+                            <div class="credit-key">Trend Direction</div>
+                            <span class={creditTrendChipClass}>{creditTrendDirection}</span>
+                        </div>
+                        <div class="credit-divider"></div>
+                        <div class="credit-stat">
+                            <div class="credit-val" style={creditStat3Style}>{workingCapitalDisplay}</div>
+                            <div class="credit-key">Working Capital Pressure</div>
+                            <span class={workingCapitalChipClass}>{workingCapitalLabel}</span>
+                        </div>
+                        <div class="credit-divider"></div>
+                        <div class="credit-stat">
+                            <div class="credit-val">{creditTermDisplay}</div>
+                            <div class="credit-key">Standard Credit Term</div>
+                        </div>
+                        <div class="credit-justification">{creditJustification}</div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: STRATEGIC IMPLICATIONS -->
+                <div class="section-block">
+                    <div class="section-header">
+                        <div class="section-icon icon-teal">🎯</div>
+                        <span class="section-title">Strategic Implications</span>
+                        <span class="section-count">{strategicImplicationsCount} teams</span>
+                    </div>
+                    <div class="implications-grid">
+                        <template for:each={strategicImplicationCards} for:item="card">
+                            <div key={card.key} class={card.cardClass}>
+                                <div class="impl-header">
+                                    <span class="impl-icon">{card.icon}</span>
+                                    <span class="impl-title">{card.title}</span>
+                                </div>
+                                <div class="impl-body">
+                                    <template for:each={card.items} for:item="item">
+                                        <div key={item.key} class="impl-item">
+                                            <div class="impl-bullet"></div>
+                                            <span>{item.text}</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</template>

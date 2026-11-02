@@ -1,0 +1,386 @@
+<template>
+    <div class="container">
+
+        <!-- Top Row: Player (left) | Transcript (right) -->
+        <div class={topRowClass}>
+
+            <!-- Left Panel: Audio Player & Pipeline -->
+            <div class="player-panel">
+                <template if:false={hasUploadedFile}>
+                    <div class="upload-dropzone" ondragover={handleDragOver} ondrop={handleDrop}>
+                        <div class="upload-icon-circle">
+                            <lightning-icon icon-name="utility:upload" size="small"></lightning-icon>
+                        </div>
+                        <p class="upload-text">Drop audio file here or click to browse</p>
+                        <lightning-button variant="brand" label="Choose File" icon-name="utility:attach" onclick={handleChooseFile}></lightning-button>
+                        <input type="file" accept="audio/*" class="file-input" onchange={handleFileSelected}/>
+                        <p class="upload-hint">MP3, WAV, M4A, WebM, OGG up to 25MB</p>
+                    </div>
+                </template>
+
+                <template if:true={hasUploadedFile}>
+                    <!-- File Info -->
+                    <div class="file-header">
+                        <div class="file-icon-wrap">
+                            <lightning-icon icon-name="doctype:audio" size="x-small"></lightning-icon>
+                        </div>
+                        <div class="file-meta">
+                            <span class="file-name" title={uploadedFileName}>{uploadedFileName}</span>
+                            <span class="file-size">{uploadedFileSize}</span>
+                        </div>
+                        <lightning-button-icon icon-name="utility:close" alternative-text="Remove" variant="bare" size="small" onclick={handleRemoveFile}></lightning-button-icon>
+                    </div>
+
+                    <!-- Waveform Player -->
+                    <div class="waveform-panel">
+                        <audio class="audio-element" onplay={handleOnPlay} onpause={handleOnPause} ontimeupdate={handleOnTimeUpdate} onloadedmetadata={handleMetadataLoaded} preload="metadata"></audio>
+                        <div class="waveform-track" onclick={handleSeek}>
+                            <div class="waveform-progress" style={waveformProgressStyle}></div>
+                        </div>
+                        <div class="player-controls">
+                            <span class="player-time">{currentTimeFormatted} / {totalTimeFormatted}</span>
+                            <div class="player-controls-center">
+                                <button class="skip-btn" onclick={handleSkipBackward} title="Rewind 10s">
+                                    <lightning-icon icon-name="utility:undo" size="xx-small"></lightning-icon>
+                                </button>
+                                <lightning-button-icon icon-name={playPauseIcon} alternative-text={playPauseAltText} onclick={handlePlayPause} size="small" variant="brand"></lightning-button-icon>
+                                <button class="skip-btn" onclick={handleSkipForward} title="Forward 10s">
+                                    <lightning-icon icon-name="utility:redo" size="xx-small"></lightning-icon>
+                                </button>
+                            </div>
+                            <div class="player-controls-right">
+                                <button class="speed-btn" onclick={handleSpeedChange} title="Playback speed">{playbackSpeedLabel}</button>
+                                <div class="volume-wrap">
+                                    <lightning-icon icon-name="utility:volume_high" size="xx-small"></lightning-icon>
+                                    <input type="range" class="volume-slider" min="0" max="100" value={volumeLevel} onchange={handleVolumeChange}/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analyse Button -->
+                    <button class="analyse-btn" onclick={handleAnalyse} disabled={isAnalysing}>
+                        <lightning-icon icon-name="utility:sparkles" size="xx-small"></lightning-icon>
+                        <span>Analyse &amp; Transcribe</span>
+                    </button>
+
+                    <!-- Pipeline Stepper (stays visible after completion) -->
+                    <template if:true={showPipeline}>
+                        <div class="pipeline-stepper">
+                            <div class="stepper-labels">
+                                <template for:each={progressSteps} for:item="step">
+                                    <span key={step.id} class={step.stepClass}>
+                                        <div class={step.dotClass}></div>
+                                        <span class="step-text">{step.label}</span>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="pipeline-bar-track">
+                                <div class="pipeline-bar-fill" style={progressBarStyle}></div>
+                            </div>
+                            <p class="pipeline-status">
+                                {analysingStatus}
+                                <template if:true={isAnalysing}>
+                                    <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
+                                </template>
+                            </p>
+                        </div>
+                    </template>
+                </template>
+            </div>
+
+            <!-- Right Panel: Transcript (always visible when file uploaded) -->
+            <template if:true={hasUploadedFile}>
+                <div class="transcript-panel">
+                    <div class="transcript-header">
+                        <div class="transcript-header-left">
+                            <div class="transcript-icon-wrap">
+                                <lightning-icon icon-name="utility:text" size="xx-small"></lightning-icon>
+                            </div>
+                            <div class="transcript-meta">
+                                <span class="transcript-title">Transcript</span>
+                                <template if:true={hasNativeTranscript}>
+                                    <span class="transcript-word-badge">{transcriptWordCount} words</span>
+                                </template>
+                            </div>
+                        </div>
+                        <template if:true={hasNativeTranscript}>
+                            <lightning-button-icon icon-name={transcriptChevronIcon} alternative-text="Toggle" variant="bare" size="small" onclick={handleToggleTranscript}></lightning-button-icon>
+                        </template>
+                    </div>
+                    <template if:true={hasNativeTranscript}>
+                        <template if:true={isTranscriptExpanded}>
+                            <div class="transcript-body">
+                                <div class="transcript-content">{nativeTranscript}</div>
+                            </div>
+                        </template>
+                    </template>
+                    <template if:false={hasNativeTranscript}>
+                        <div class="transcript-empty">
+                            <div class="empty-icon-wrap">
+                                <lightning-icon icon-name="utility:magicwand" size="small"></lightning-icon>
+                            </div>
+                            <p class="empty-title">No transcript yet</p>
+                            <p class="empty-subtitle">Click "Analyse &amp; Transcribe" to generate the transcript from your audio file.</p>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Full-Width Analysis Section -->
+        <template if:true={hasAnalysisResults}>
+            <div class="analysis-panel">
+                <!-- Tab Navigation -->
+                <div class="tab-nav">
+                    <button class={insightsTabClass} onclick={handleTabInsights}>
+                        <lightning-icon icon-name="utility:einstein" size="xx-small"></lightning-icon>
+                        <span>Executive Analysis</span>
+                    </button>
+                    <button class={actionsTabClass} onclick={handleTabActions}>
+                        <lightning-icon icon-name="utility:list" size="xx-small"></lightning-icon>
+                        <span>Action Items</span>
+                        <template if:true={actionCount}>
+                            <span class="tab-badge">{actionCount}</span>
+                        </template>
+                    </button>
+                </div>
+
+                <!-- Executive Analysis Tab -->
+                <template if:true={isInsightsTab}>
+                    <div class="tab-body">
+                        <!-- Metrics 2x2 Grid -->
+                        <div class="metrics-row">
+                            <div class="metric-card">
+                                <div class="donut-chart">
+                                    <svg viewBox="0 0 36 36" class="donut-svg">
+                                        <path class="donut-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                        <path class={donutStrokeClass} stroke-dasharray={scoreDonutDash} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    </svg>
+                                    <div class="donut-center">
+                                        <span class="donut-value">{scoreDisplay}</span>
+                                    </div>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="metric-label">Criticality Score</span>
+                                    <span class="metric-sublabel">Conversation Assessment</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class={sentimentIconWrapClass}>
+                                    <lightning-icon icon-name={sentimentIconName} size="small"></lightning-icon>
+                                </div>
+                                <div class="metric-info">
+                                    <span class={sentimentValueClass}>{insightSentiment}</span>
+                                    <span class="metric-sublabel">Overall sentiment</span>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="tone-icon-wrap">
+                                    <lightning-icon icon-name="utility:chat" size="small"></lightning-icon>
+                                </div>
+                                <div class="metric-info">
+                                    <span class="tone-value">{toneAnalysis}</span>
+                                    <span class="metric-sublabel">Communication tone</span>
+                                </div>
+                            </div>
+                            <template if:true={hasToneChart}>
+                                <div class="metric-card radar-metric-card">
+                                    <div class="tone-radar-chart">
+                                        <svg viewBox="0 0 200 200" class="radar-svg">
+                                            <polygon class="radar-grid" points={radarGrid100}></polygon>
+                                            <polygon class="radar-grid" points={radarGrid75}></polygon>
+                                            <polygon class="radar-grid" points={radarGrid50}></polygon>
+                                            <polygon class="radar-grid" points={radarGrid25}></polygon>
+                                            <line class="radar-axis" x1="100" y1="100" x2="100" y2="20"></line>
+                                            <line class="radar-axis" x1="100" y1="100" x2="169" y2="140"></line>
+                                            <line class="radar-axis" x1="100" y1="100" x2="31" y2="140"></line>
+                                            <polygon class="radar-data" points={radarDataPoints}></polygon>
+                                            <polygon class="radar-data-stroke" points={radarDataPoints}></polygon>
+                                            <circle class="radar-dot" cx={radarDot1X} cy={radarDot1Y} r="4"></circle>
+                                            <circle class="radar-dot" cx={radarDot2X} cy={radarDot2Y} r="4"></circle>
+                                            <circle class="radar-dot" cx={radarDot3X} cy={radarDot3Y} r="4"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="tone-radar-legend">
+                                        <template for:each={toneChartBars} for:item="bar">
+                                            <div key={bar.id} class="radar-legend-item">
+                                                <div class={bar.dotClass}></div>
+                                                <span class="radar-legend-label">{bar.label}</span>
+                                                <span class="radar-legend-value">{bar.valueLabel}</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Executive Summary (full-width) -->
+                        <template if:true={insightSummary}>
+                            <div class="summary-section">
+                                <h3 class="section-label">
+                                    <lightning-icon icon-name="utility:quote" size="xx-small"></lightning-icon>
+                                    <span>Executive Legal Summary</span>
+                                </h3>
+                                <div class="summary-card">
+                                    <p class="summary-text">{insightSummary}</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Sentiment Callout -->
+                        <template if:true={sentimentDescription}>
+                            <div class="alignment-callout">
+                                <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
+                                <p class="callout-text">{sentimentDescription}</p>
+                            </div>
+                        </template>
+
+                        <!-- 2-Column: Key Points | Improvements + Risks -->
+                        <div class="analysis-grid">
+                            <div class="analysis-col-left">
+                                <template if:true={hasKeyPoints}>
+                                    <div class="insight-section">
+                                        <h3 class="section-label">Key Meeting Decisions</h3>
+                                        <div class="key-points-list">
+                                            <template for:each={insightKeyPoints} for:item="point">
+                                                <div key={point.id} class="kp-card">
+                                                    <span class="kp-number">{point.number}</span>
+                                                    <span class="kp-text">{point.text}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="analysis-col-right">
+                                <template if:true={hasImprovements}>
+                                    <div class="insight-section">
+                                        <h3 class="section-label">Areas for Improvement</h3>
+                                        <template for:each={improvements} for:item="item">
+                                            <div key={item.id} class="improvement-row">
+                                                <div class="imp-icon">
+                                                    <lightning-icon icon-name="utility:warning" size="xx-small"></lightning-icon>
+                                                </div>
+                                                <span class="imp-text">{item.text}</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template if:true={hasRiskFlags}>
+                                    <div class="risk-section">
+                                        <h3 class="section-label risk-title">
+                                            <lightning-icon icon-name="utility:shield" size="xx-small"></lightning-icon>
+                                            <span>Risk Flags</span>
+                                        </h3>
+                                        <template for:each={insightRiskFlags} for:item="flag">
+                                            <div key={flag.id} class="risk-row">
+                                                <div class="risk-dot"></div>
+                                                <span class="risk-text">{flag.text}</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Actions Tab -->
+                <template if:true={isActionsTab}>
+                    <div class="tab-body">
+                        <template if:true={hasActionCategories}>
+                            <div class="actions-grid">
+                                <template for:each={actionCategoriesWithFields} for:item="category">
+                                    <div key={category.id} class="action-category">
+                                        <div class="category-header" onclick={handleToggleCategory} data-category-id={category.id}>
+                                            <div class="category-header-left">
+                                                <lightning-icon icon-name={category.icon} size="xx-small" class="cat-icon"></lightning-icon>
+                                                <span class="category-title">{category.title}</span>
+                                            </div>
+                                            <lightning-icon icon-name={category.chevronIcon} size="xx-small"></lightning-icon>
+                                        </div>
+                                        <template if:true={category.isExpanded}>
+                                            <template if:true={category.triggeredBy}>
+                                                <div class="category-trigger">
+                                                    <span class="trigger-label">Triggered by:</span>
+                                                    <span class="trigger-text">{category.triggeredBy}</span>
+                                                </div>
+                                            </template>
+                                            <div class="category-actions-list">
+                                                <template for:each={category.actions} for:item="action">
+                                                    <div key={action.id} class="action-item">
+                                                        <div class="action-item-left">
+                                                            <div class="action-dot"></div>
+                                                            <span class="action-item-text">{action.text}</span>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div class="category-footer">
+                                                <template if:false={category.isCreated}>
+                                                    <template if:true={category.isCreating}>
+                                                        <div class="record-creating-indicator">
+                                                            <div class="creating-progress-bar">
+                                                                <div class="creating-progress-fill"></div>
+                                                            </div>
+                                                            <span class="creating-text">Creating<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></span>
+                                                        </div>
+                                                    </template>
+                                                    <template if:false={category.isCreating}>
+                                                        <button class="create-btn category-create-btn" data-category-id={category.id} onclick={handleCreateCategoryRecord}>{category.createBtnLabel}</button>
+                                                    </template>
+                                                </template>
+                                                <template if:true={category.isCreated}>
+                                                    <div class="created-confirmation">
+                                                        <div class="created-confirmation-header">
+                                                            <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon>
+                                                            <span class="created-type">{category.createdResult.recordType}</span>
+                                                        </div>
+                                                        <div class="created-fields">
+                                                            <template for:each={category.createdFieldsList} for:item="field">
+                                                                <div key={field.key} class="created-field-row">
+                                                                    <span class="created-field-label">{field.key}</span>
+                                                                    <span class="created-field-value">{field.value}</span>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                        <template if:true={category.hasRecordLinks}>
+                                                            <div class="created-record-links">
+                                                                <template for:each={category.recordLinks} for:item="link">
+                                                                    <a key={link.id} href={link.url} class="record-link" target="_blank">
+                                                                        <lightning-icon icon-name="utility:new_window" size="xx-small"></lightning-icon>
+                                                                        <span>{link.label}</span>
+                                                                    </a>
+                                                                </template>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template if:false={hasActionCategories}>
+                            <div class="empty-state">
+                                <lightning-icon icon-name="utility:check" size="medium"></lightning-icon>
+                                <p>No actionable items identified from this recording.</p>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </template>
+    </div>
+
+    <!-- Error Toast -->
+    <template if:true={hasError}>
+        <div class="error-toast">
+            <lightning-icon icon-name="utility:error" size="x-small" class="error-toast-icon"></lightning-icon>
+            <span>{errorMessage}</span>
+            <lightning-button-icon icon-name="utility:close" variant="bare-inverse" alternative-text="Dismiss" onclick={dismissError}></lightning-button-icon>
+        </div>
+    </template>
+</template>

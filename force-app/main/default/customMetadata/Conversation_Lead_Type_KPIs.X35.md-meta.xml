@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>35</label>
+    <protected>false</protected>
+    <values>
+        <field>Conversation_Parameters__c</field>
+        <value xsi:type="xsd:string">Script Adherence group. Metric: mandatoryDisclosures. Audio-observable.</value>
+    </values>
+    <values>
+        <field>KPI_Question__c</field>
+        <value xsi:type="xsd:string">Informed the customer of the correct lead source and explained the purpose of the call</value>
+    </values>
+    <values>
+        <field>Lead_Type__c</field>
+        <value xsi:type="xsd:string">Common</value>
+    </values>
+    <values>
+        <field>Weightage__c</field>
+        <value xsi:type="xsd:double">4</value>
+    </values>
+</CustomMetadata>
